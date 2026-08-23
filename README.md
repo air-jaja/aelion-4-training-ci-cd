@@ -10,6 +10,10 @@ Pour demarrer et se mettre a niveau sans perdre son travail, lire
 [`FORMATION/README.md`](FORMATION/README.md). Le calendrier des douze jalons est
 dans [`FORMATION/PLAN_JALONS.md`](FORMATION/PLAN_JALONS.md).
 
+Les apprenants Windows, macOS et Linux utilisent les memes jalons et les memes
+preuves. Les commandes propres a chaque systeme sont regroupees dans
+[`FORMATION/GUIDE_MULTIPLATEFORME_APPRENANT.md`](FORMATION/GUIDE_MULTIPLATEFORME_APPRENANT.md).
+
 > Regle de securite : travailler sur une branche personnelle, commiter avant
 > chaque mise a niveau et ne jamais recopier de cle, jeton ou mot de passe dans
 > le depot.
