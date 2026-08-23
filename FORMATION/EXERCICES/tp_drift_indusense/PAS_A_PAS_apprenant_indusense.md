@@ -1,5 +1,10 @@
 # Pas à pas apprenant — Drift InduSense, passe 2 des modules 31-32
 
+> **Windows, macOS ou Linux.** Les blocs ci-dessous sont la voie Windows
+> PowerShell. Sous macOS zsh ou Linux bash, ouvrez à côté
+> [`COMMANDES_MACOS_LINUX.md`](COMMANDES_MACOS_LINUX.md) : il reprend les mêmes
+> créneaux, commandes et preuves avec la syntaxe POSIX exacte.
+
 Cette activité se déroule **J5 matin, de 09h00 à 12h30**, dans le miroir autonome
 `tp_drift_indusense`. Elle prolonge PayGuard sur les capteurs InduSense. Le miroir contient ses données
 dérivées, son modèle, ses tests et son propre environnement verrouillé ; ne cherchez ni dépôt GitHub ni
