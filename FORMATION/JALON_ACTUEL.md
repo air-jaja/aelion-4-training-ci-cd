@@ -1,6 +1,6 @@
-# Jalon actuel : 07-j4-matin-m29-m30
+# Jalon actuel : 08-j4-apres-midi-m31-m32-payguard
 
-Etat revele pour J4 matin : stack M28 et activites orchestration M29-M30.
+Etat revele pour J4 apres-midi : pipeline M30 et TP drift PayGuard M31-M32.
 
 - Source locale de provenance : starter remis au precedent groupe au demarrage
   du Sprint 3, commit historique `0d02af0`.
@@ -9,7 +9,7 @@ Etat revele pour J4 matin : stack M28 et activites orchestration M29-M30.
 - La reference data-science semantique de fin S2 (Marine) reste separee ; ses
   chiffres et artefacts ne sont pas fusionnes avec le RF starter.
 - Donnees, modele RF, metadata, package minimal et tests sont presents.
-- Aucun flow Prefect termine, calcul de drift, dashboard final ou Game Day n'est
+- Aucun corrige PayGuard, drift InduSense, dashboard final ou Game Day n'est
   revele dans ce jalon.
 
 Ce jalon n'est pas nomme `baseline_stagiaire_exacte`, car le dernier checkout
