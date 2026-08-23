@@ -1,6 +1,6 @@
-# Jalon actuel : 00-fin-sprint2
+# Jalon actuel : 00-reconstruction-fin-sprint2
 
-Etat de depart operationnel normalise, avant toute activite en salle du Sprint 3.
+Reconstruction de depart operationnelle, avant toute activite en salle du Sprint 3.
 
 - Source locale de provenance : starter remis au precedent groupe au demarrage
   du Sprint 3, commit historique `0d02af0`.
@@ -11,6 +11,9 @@ Etat de depart operationnel normalise, avant toute activite en salle du Sprint 3
 - Donnees, modele RF, metadata, package minimal et tests sont presents.
 - Aucune API, image Docker, orchestration Prefect, mesure de drift ou solution de
   Game Day n'est revelee dans ce jalon.
+
+Ce jalon n'est pas nomme `baseline_stagiaire_exacte`, car le dernier checkout
+reel de ce groupe en fin M22 n'est pas present dans les sources locales.
 
 Details et empreintes : [`PROVENANCE_SOCLE.md`](PROVENANCE_SOCLE.md).
 

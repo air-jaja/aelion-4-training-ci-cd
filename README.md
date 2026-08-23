@@ -1,6 +1,8 @@
 # InduSense — parcours progressif Sprint 3 CISIA
 
-Ce depot part d'un **socle normalise de fin de Sprint 2**. Il ne contient pas
+Ce depot part d'une **reconstruction operationnelle de la frontiere Sprint 2**.
+Le checkout stagiaire exact de fin M22 n'ayant pas ete retrouve localement, ce
+socle ne doit pas etre presente comme sa copie exacte. Il ne contient pas
 d'avance les solutions du Sprint 3 : le formateur revele un jalon cumulatif au
 debut de chaque demi-journee.
 
