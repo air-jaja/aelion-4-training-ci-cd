@@ -73,6 +73,11 @@ services:                 # 'services' = la liste de tous les conteneurs à lanc
   prometheus:             # --- SERVICE 3 : Prometheus, collecteur de métriques (monitoring) ---
     image: prom/prometheus:v2.53.0       # Version vérifiée et mise en cache sur le poste formateur (22/08/2026).
     ports: ["9090:9090"]                # Expose l'interface web de Prometheus sur le port 9090 du PC.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+                          # Docker Desktop fournit déjà ce nom. Cette entrée lui donne aussi une
+                          # passerelle explicite sous Docker Engine Linux, afin que Prometheus
+                          # puisse joindre l'exporteur drift lancé sur l'hôte au port 9109.
     volumes: ["./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml"]
                           # On MONTE notre fichier de config local (./monitoring/prometheus.yml) à
                           #   l'emplacement attendu DANS le conteneur. Prometheus lira ainsi NOTRE
