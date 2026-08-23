@@ -9,7 +9,6 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 
-
 COPIES = (
     Path("tests/test_readiness_probe.py"),
     Path("tests/test_model_card_gate.py"),
@@ -46,9 +45,7 @@ def main() -> int:
     project = Path(args.project_path).expanduser().resolve(strict=True)
     lock_path = project / "uv.lock"
     if not lock_path.is_file():
-        raise SystemExit(
-            "Le dossier cible n'est pas la racine du projet CISIA : uv.lock absent."
-        )
+        raise SystemExit("Le dossier cible n'est pas la racine du projet CISIA : uv.lock absent.")
 
     for relative in REQUIRED:
         if not (overlay / relative).is_file():
