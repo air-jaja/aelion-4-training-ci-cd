@@ -15,17 +15,35 @@ from sklearn.metrics import average_precision_score, confusion_matrix, roc_auc_s
 
 from indusense.monitoring.drift import drift_table
 
+# Chemins centralisés : le script fonctionne depuis VS Code, PowerShell, zsh ou
+# bash même si le terminal n'est pas positionné exactement à la racine du dépôt.
 RACINE = Path(__file__).resolve().parents[1]
 DRIFT = RACINE / "data" / "drift"
 
 
 def main() -> None:
+    # ---------------------------------------------------------------------
+    # 1. Lire les choix de la personne qui lance la ronde de surveillance.
+    # ---------------------------------------------------------------------
     ap = argparse.ArgumentParser()
+
+    # `choices` transforme une faute de frappe en message d'aide immédiat au
+    # lieu de produire plus tard un obscur « fichier introuvable ».
     ap.add_argument("--fenetre", required=True, choices=["1", "2", "3", "janvier"])
+
+    # Trois références permettent de montrer qu'un verdict de drift dépend du
+    # contexte choisi : régime normal, haute charge ou train historique complet.
     ap.add_argument("--reference", default="normale", choices=["normale", "haute", "train"])
+
+    # Le filtre machine est facultatif : sans lui, on évalue toute la flotte.
     ap.add_argument("--machine", default=None)
     args = ap.parse_args()
 
+    # ---------------------------------------------------------------------
+    # 2. Charger référence et fenêtre courante avec une correspondance explicite.
+    # ---------------------------------------------------------------------
+    # Ce dictionnaire évite d'éparpiller des `if/elif` et rend visible le contrat
+    # entre le nom pédagogique de la référence et le fichier réellement lu.
     fic = {
         "normale": "reference_normale.csv",
         "haute": "reference_haute.csv",
@@ -33,13 +51,24 @@ def main() -> None:
     }
     df_ref = pd.read_csv(DRIFT / fic[args.reference])
     df_cur = pd.read_csv(DRIFT / f"fenetre_{args.fenetre}.csv")
+
+    # Si une machine est fournie, le MÊME filtre s'applique aux deux côtés de la
+    # comparaison. Comparer une machine à toute la flotte répondrait à une autre
+    # question et pourrait créer un faux signal de dérive.
     if args.machine:
         df_ref, df_cur = (
             df_ref[df_ref["machine"] == args.machine],
             df_cur[df_cur["machine"] == args.machine],
         )
 
+    # ---------------------------------------------------------------------
+    # 3. Mesurer le covariate drift, puis préparer uniquement l'AFFICHAGE.
+    # ---------------------------------------------------------------------
     table = drift_table(df_ref, df_cur)
+
+    # `aff` est une copie : on y convertit les nombres en chaînes joliment
+    # formatées sans dégrader les vraies valeurs numériques qui seront écrites
+    # dans le CSV et utilisées par Prometheus.
     aff = table.copy()
     aff["psi"] = aff["psi"].map(lambda v: f"{v:.3f}")
     aff["ks_pvalue"] = aff["ks_pvalue"].map(lambda v: f"{v:.2e}")
@@ -49,12 +78,27 @@ def main() -> None:
     )
     print(aff.to_string(index=False))
 
+    # ---------------------------------------------------------------------
+    # 4. Évaluer le modèle gelé avec le contrat sauvegardé à l'entraînement.
+    # ---------------------------------------------------------------------
+    # Le modèle et sa carte doivent voyager ensemble. La carte fournit l'ordre
+    # exact des features et, surtout, le seuil métier choisi sur la validation.
     modele = joblib.load(RACINE / "artifacts" / "drift_model.joblib")
     carte = json.loads((RACINE / "artifacts" / "drift_threshold.json").read_text(encoding="utf-8"))
+
+    # On produit des probabilités continues, puis on applique le seuil GELÉ.
+    # Il serait méthodologiquement faux de réoptimiser ce seuil sur chaque
+    # fenêtre courante : cela masquerait la dégradation en production.
     proba = modele.predict_proba(df_cur[carte["features"]])[:, 1]
     y = df_cur["panne_v1"].to_numpy()
     yp = (proba >= carte["seuil"]).astype(int)
+
+    # Ordre scikit-learn : TN, FP, FN, TP. Les FN sont ici particulièrement
+    # coûteux car ils représentent des pannes non signalées à la maintenance.
     tn, fp, fn, tp = confusion_matrix(y, yp).ravel()
+
+    # Le dictionnaire `m` est volontairement composé de types Python simples :
+    # il pourra être converti sans surprise en une ligne CSV ou en JSON.
     m = {
         "fenetre": args.fenetre,
         "reference": args.reference,
@@ -75,15 +119,28 @@ def main() -> None:
         f"ROC {m['roc_auc']:.3f} · FN={fn}"
     )
 
+    # ---------------------------------------------------------------------
+    # 5. Écrire les preuves de façon idempotente.
+    # ---------------------------------------------------------------------
+    # Le répertoire est créé si nécessaire. Le tableau PSI/KS garde une preuve
+    # détaillée par feature et par couple fenêtre/référence.
     rp = RACINE / "reports" / "drift"
     rp.mkdir(parents=True, exist_ok=True)
     table.to_csv(rp / f"psi_f{args.fenetre}_ref-{args.reference}.csv", index=False)
+
+    # `suivi_fenetres.csv` est un journal compact destiné aux dashboards. Avant
+    # d'ajouter la nouvelle ligne, on retire l'ancienne ligne portant la même
+    # clé (fenêtre + référence). Une relance met donc à jour au lieu de dupliquer.
     suivi = rp / "suivi_fenetres.csv"
     ligne = pd.DataFrame([m])
     if suivi.exists():
+        # `dtype={"fenetre": str}` préserve « janvier » et empêche pandas de
+        # traiter différemment les fenêtres numériques et textuelles.
         old = pd.read_csv(suivi, dtype={"fenetre": str})
         old = old[~((old["fenetre"] == m["fenetre"]) & (old["reference"] == m["reference"]))]
         ligne = pd.concat([old, ligne], ignore_index=True)
+
+    # `index=False` évite d'ajouter une colonne technique sans sens métier.
     ligne.to_csv(suivi, index=False)
 
 
