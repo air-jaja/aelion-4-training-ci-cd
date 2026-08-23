@@ -1,6 +1,6 @@
 # Jalon actuel : 01-j1-matin-m23
 
-Etat revele pour J1 matin : socle operationnel normalise et activite M23.
+Etat revele pour J1 matin : reconstruction operationnelle S2 et activite M23.
 
 - Source locale de provenance : starter remis au precedent groupe au demarrage
   du Sprint 3, commit historique `0d02af0`.
@@ -11,6 +11,9 @@ Etat revele pour J1 matin : socle operationnel normalise et activite M23.
 - Donnees, modele RF, metadata, package minimal et tests sont presents.
 - Aucune API, image Docker, orchestration Prefect, mesure de drift ou solution de
   Game Day n'est revelee dans ce jalon.
+
+Ce jalon n'est pas nomme `baseline_stagiaire_exacte`, car le dernier checkout
+reel de ce groupe en fin M22 n'est pas present dans les sources locales.
 
 Details et empreintes : [`PROVENANCE_SOCLE.md`](PROVENANCE_SOCLE.md).
 
