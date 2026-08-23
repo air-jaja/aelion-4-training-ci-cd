@@ -1,5 +1,8 @@
 # 05 — J3 matin — M27
 
+> Windows, macOS ou Linux : suivre la section Docker du
+> [guide multiplateforme](../GUIDE_MULTIPLATEFORME_APPRENANT.md).
+
 Objectif : construire une image deterministe qui contient le modele (variante A)
 et s'execute sans privileges inutiles.
 
@@ -18,6 +21,9 @@ Invoke-RestMethod http://127.0.0.1:8000/health
 docker inspect indusense-m27 --format '{{.Config.User}}'
 docker stop indusense-m27
 ```
+
+Sous macOS/Linux, remplacer uniquement la ligne `Invoke-RestMethod` par
+`curl -fsS http://127.0.0.1:8000/health`; les commandes Docker sont identiques.
 
 Rattrapage sans Docker : lire le Dockerfile et faire valider les preuves par un
 binome ; aucun installateur improvise pendant la sequence.

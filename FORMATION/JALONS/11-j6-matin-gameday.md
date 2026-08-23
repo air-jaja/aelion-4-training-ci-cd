@@ -1,5 +1,8 @@
 # 11 — J6 matin — Game Day phases 0–2
 
+> Windows, macOS ou Linux : suivre la section J6 du
+> [guide multiplateforme](../GUIDE_MULTIPLATEFORME_APPRENANT.md).
+
 Objectif : diagnostiquer une stack volontairement cassee sans regarder de
 solution future.
 
