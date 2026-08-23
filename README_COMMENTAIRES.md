@@ -44,17 +44,16 @@ neutres afin de ne pas révéler les pannes à diagnostiquer.
 5. `src/indusense/models/tabular.py` — le modèle (RandomForest), entraînement, prédiction, sauvegarde.
 6. `src/indusense/cli.py` — les 4 commandes `indusense` (check-data / build-gold / train / predict).
 7. `tests/` — ce que chaque test garantit (anti-fuite, normalisation, isolation par machine).
-8. `scripts/generate_synthetic_gold.py` — le générateur de flux de données (200/min).
-9. `scripts/demo_versioning.py` — la démo DVC + MLflow (versionner données + modèle).
-10. `.pre-commit-config.yaml`, `.github/workflows/ci.yml`, `Makefile`, `.gitignore`, `.env.example` — l'outillage qualité/CI.
+8. `scripts/demo_versioning.py` — la démo DVC + MLflow (versionner données + modèle).
+9. `.pre-commit-config.yaml`, `.github/workflows/ci.yml`, `Makefile`, `.gitignore`, `.env.example` — l'outillage qualité/CI.
 
 ## Fichiers fortement commentés
 
 | Catégorie | Fichiers |
 |---|---|
 | Package | `config.py`, `cli.py`, `data/loaders.py`, `features/temporal.py`, `models/tabular.py` + les `__init__.py` |
-| Tests | `test_loaders.py`, `test_package.py`, `test_temporal.py`, `test_temporal_gold.py` |
-| Scripts | `generate_synthetic_gold.py`, `demo_versioning.py`, `train_drift_model.py`, `evaluate_drift.py`, `export_drift_metrics.py`, `check_env_macos.sh`, `check_env_windows.ps1` |
+| Tests | `test_loaders.py`, `test_package.py`, `test_temporal.py`, `test_api.py`, `test_security.py`, `test_drift_monitoring.py` |
+| Scripts | `demo_versioning.py`, `train_drift_model.py`, `evaluate_drift.py`, `export_drift_metrics.py`, `check_env_macos.sh`, `check_env_windows.ps1` |
 | Drift | `monitoring/drift.py` : PSI, KS, seuils, contrat machine et limites d'interprétation |
 | Config/CI | `pyproject.toml`, `.pre-commit-config.yaml`, `.github/workflows/ci.yml`, `Makefile`, `.gitignore`, `.env.example` |
 
