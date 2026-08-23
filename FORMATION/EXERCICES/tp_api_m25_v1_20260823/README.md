@@ -1,7 +1,7 @@
 # Surcouche de preuves M25 — API et Model Card
 
-Version : **v1 — 23/08/2026**. Cette ressource complète le dépôt canonique
-`CISIA_29062026` sans le remplacer. Elle ajoute deux tests 503 et une porte de
+Version : **v2 multiplateforme — 23/08/2026**. Cette ressource complète le dépôt
+CISIA ouvert par l'apprenant sans le remplacer. Elle ajoute deux tests 503 et une porte de
 Model Card fondée sur la structure, le statut des informations et leurs preuves.
 
 ## Ce que la surcouche prouve
@@ -18,29 +18,47 @@ Model Card fondée sur la structure, le statut des informations et leurs preuves
   pas réellement prouvés. Un passage vert signifie **prêt pour revue**, jamais
   « compétence acquise » automatiquement.
 
-## Installation Windows / PowerShell, depuis le projet canonique
+## Installation recommandée — Windows, macOS et Linux
 
-Décompresser cette ressource à côté de `CISIA_29062026`, puis ouvrir PowerShell
-à la racine du projet. Le script est **idempotent** : un fichier déjà identique
-n'est pas recopié ; un fichier homonyme différent est sauvegardé sous
-`$env:TEMP\CISIA_M25_backup_<horodatage>` avant copie. Aucun `.bak` n'est créé
-dans le dépôt et le verrou est contrôlé avant/après.
+Dans VS Code, ouvrir la racine du projet puis **Terminal > Nouveau terminal**.
+La première commande prépare l'environnement exclusivement à partir du verrou ;
+la deuxième applique la surcouche avec le même Python 3.13 sur les trois
+systèmes. Un fichier déjà identique n'est pas recopié ; un homonyme différent
+est sauvegardé dans le dossier temporaire du système. Aucun `.bak` n'est créé
+dans le dépôt et `uv.lock` est contrôlé avant/après.
+
+```text
+uv sync --frozen --extra dev
+uv run --frozen python FORMATION/EXERCICES/tp_api_m25_v1_20260823/APPLIQUER_PREUVES_M25.py .
+uv run pytest -q tests/test_api.py tests/test_readiness_probe.py tests/test_model_card_gate.py
+uv run python scripts/validate_model_card.py docs/model_card.md --project-root .
+git status --short -- uv.lock
+```
+
+Si la ressource a été remise à côté d'un autre clone, adaptez uniquement son
+chemin :
+
+```text
+uv sync --frozen --extra dev
+uv run --frozen python ../tp_api_m25_v1_20260823/APPLIQUER_PREUVES_M25.py .
+uv run pytest -q tests/test_api.py tests/test_readiness_probe.py tests/test_model_card_gate.py
+uv run python scripts/validate_model_card.py docs/model_card.md --project-root .
+git status --short -- uv.lock
+```
+
+La dernière commande ne doit rien afficher. Si elle affiche `uv.lock`, arrêter
+et prévenir le formateur.
+
+### Alternative Windows PowerShell
+
+Le script PowerShell historique reste disponible pour les postes Windows. Il
+offre les mêmes sauvegardes et contrôles, mais la voie Python ci-dessus est la
+référence commune à la classe :
 
 ```powershell
 $overlay = (Resolve-Path -LiteralPath '..\tp_api_m25_v1_20260823').Path
 & (Join-Path $overlay 'APPLIQUER_PREUVES_M25.ps1') -ProjectPath .
 if (-not $?) { throw 'Application de la surcouche M25 impossible.' }
-uv sync --frozen --extra dev
-if ($LASTEXITCODE -ne 0) { throw 'uv sync --frozen --extra dev a échoué.' }
-
-uv run pytest -q tests/test_api.py tests/test_readiness_probe.py tests/test_model_card_gate.py
-if ($LASTEXITCODE -ne 0) { throw 'Les preuves M25 ne sont pas vertes.' }
-
-uv run python scripts/validate_model_card.py docs/model_card.md --project-root .
-if ($LASTEXITCODE -ne 0) { throw 'La structure/provenance de la Model Card échoue.' }
-
-git status --short -- uv.lock
-# attendu : aucune ligne
 ```
 
 Résultat attendu avec le dépôt canonique et le modèle de carte livré :
@@ -61,12 +79,12 @@ noms des tests collectés, pas un compteur mémorisé.
 Après avoir remplacé les statuts `[à produire]` par `[mesuré]` et ajouté les
 chemins `preuve=...` vers de vrais artefacts locaux :
 
-```powershell
-uv run python scripts/validate_model_card.py docs/model_card.md --project-root . --require-c5
-if ($LASTEXITCODE -ne 0) {
-  throw 'C5 non prête : conserver NOT_READY et compléter les preuves réelles.'
-}
+```text
+uv run --frozen python scripts/validate_model_card.py docs/model_card.md --project-root . --require-c5
 ```
+
+Un code de sortie non nul signifie : conserver `NOT_READY` et compléter les
+preuves réelles. Ne contournez pas cette porte.
 
 Résultat attendu uniquement si les quatre familles de preuves sont retrouvables :
 

@@ -373,13 +373,16 @@ def main() -> int:
     # On n'exécute PAS git commit à la place de l'apprenant : on lui DONNE les
     # commandes à copier-coller pour figer la version (commit + tag + push).
     print("\n== 4. Figer la version (a copier-coller) ==")
-    print("   git add data/gold/gold_dataset.csv.dvc artifacts/models/rf.joblib.dvc \\")
-    print("           .gitignore metrics.json params.yaml")
+    print(
+        "   git add data/gold/gold_dataset.csv.dvc "
+        "artifacts/models/rf.joblib.dvc .gitignore metrics.json params.yaml"
+    )
     print(f'   git commit -m "data+model {metadata["gold_md5"]} | PR-AUC {metrics["pr_auc"]}"')
     print(f'   git tag data-{metadata["gold_md5"]}')  # tag = étiquette lisible de cette version
     if args.remote:
         print("   dvc push            # envoie data+modele vers le remote")
-    print("   # revenir a une version :  git checkout <tag> && dvc checkout")
+    print(f"   git switch --detach data-{metadata['gold_md5']}")
+    print("   dvc checkout        # commande suivante, sur une ligne separee")
     return 0
 
 
