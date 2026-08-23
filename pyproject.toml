@@ -95,8 +95,10 @@ packages = ["src/indusense"]
 line-length = 100
 # Version de Python ciblee pour les regles d'analyse (ici 3.13).
 target-version = "py313"
-# Dossiers a EXCLURE de l'analyse (environnements virtuels, dossiers de build).
-extend-exclude = [".venv*", "venv*", "dist", "build"]
+# Dossiers a EXCLURE de l'analyse : environnements virtuels, sorties de build
+# et TPs autonomes. Chaque TP de FORMATION/EXERCICES est verifie avec son propre
+# pyproject/uv.lock afin de ne pas melanger ses regles avec celles d'InduSense.
+extend-exclude = [".venv*", "venv*", "dist", "build", "FORMATION/EXERCICES"]
 
 # --- [tool.ruff.lint] : quelles familles de regles ruff active-t-on ---------
 [tool.ruff.lint]
