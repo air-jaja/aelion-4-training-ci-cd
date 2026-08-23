@@ -1,5 +1,8 @@
 # 12 — J6 apres-midi — Game Day phases 3–6 et RETEX
 
+> Windows, macOS ou Linux : suivre la section J6 du
+> [guide multiplateforme](../GUIDE_MULTIPLATEFORME_APPRENANT.md).
+
 Objectif : terminer l'incident, prouver la restauration, puis transformer les
 constats en actions preventives.
 
