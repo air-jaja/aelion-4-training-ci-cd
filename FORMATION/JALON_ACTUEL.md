@@ -1,6 +1,6 @@
-# Jalon actuel : 02-j1-apres-midi-m24
+# Jalon actuel : 03-j2-matin-m25
 
-Etat revele pour J1 apres-midi : socle M23 et activite M24 CI/versioning.
+Etat revele pour J2 matin : socle M24 et activite API FastAPI M25.
 
 - Source locale de provenance : starter remis au precedent groupe au demarrage
   du Sprint 3, commit historique `0d02af0`.
