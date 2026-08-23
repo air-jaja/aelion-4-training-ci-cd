@@ -1,5 +1,8 @@
 # 02 — J1 apres-midi — M24
 
+> Windows, macOS ou Linux : suivre la section M24 du
+> [guide multiplateforme](../GUIDE_MULTIPLATEFORME_APPRENANT.md).
+
 Objectif : rendre le paquet reproductible et versionne par la qualite locale,
 la CI et les preuves DVC/MLflow, sans modifier le lock en salle.
 
