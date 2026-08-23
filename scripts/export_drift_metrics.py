@@ -15,6 +15,9 @@ from pathlib import Path
 
 import pandas as pd
 
+# `prometheus_client` est une dépendance pédagogique optionnelle. Le message
+# d'erreur indique immédiatement la commande de correction au lieu de laisser
+# Python afficher une longue trace d'import difficile à interpréter en atelier.
 try:
     from prometheus_client import Gauge, start_http_server
 except ImportError:
@@ -23,53 +26,110 @@ except ImportError:
         "(ou pip install prometheus-client)"
     ) from None
 
+# `RACINE` part de ce fichier pour retrouver le dépôt, indépendamment du dossier
+# courant du terminal. `RP` est le répertoire observé par l'exporteur.
 RACINE = Path(__file__).resolve().parents[1]
 RP = RACINE / "reports" / "drift"
 
+# Une Gauge Prometheus représente une valeur qui peut monter OU descendre. C'est
+# le bon type pour un PSI, une p-value ou un rappel recalculé à chaque fenêtre.
+# Les labels évitent de créer un nom de métrique différent par feature/fenêtre :
+# une seule série logique est découpée par dimensions interrogeables en PromQL.
 PSI = Gauge(
     "indusense_drift_psi", "PSI par feature vs référence", ["feature", "fenetre", "reference"]
 )
 KSP = Gauge("indusense_drift_ks_pvalue", "p-value KS", ["feature", "fenetre", "reference"])
+
+# `MET` fabrique six gauges de même structure. La clé Python (`rappel`, etc.)
+# correspond exactement au nom de colonne produit par evaluate_drift.py.
 MET = {
     c: Gauge(f"indusense_drift_{c}", f"{c} au seuil gelé", ["fenetre"])
     for c in ("rappel", "precision", "taux_alerte", "taux_panne", "pr_auc", "roc_auc")
 }
 
 
+# Relit les preuves CSV et rafraîchit toutes les gauges connues.
+#
+# La fonction ne lance aucun calcul de drift : elle expose uniquement les
+# preuves déjà produites par `evaluate_drift.py`. Cette séparation évite que le
+# monitoring change les résultats qu'il est censé observer.
+#
+# SORTIE : un couple `(nombre_de_tables_psi, nombre_de_lignes_de_suivi)` utilisé
+# pour la preuve lisible affichée dans le terminal de l'exporteur.
 def publier() -> tuple[int, int]:
+
+    # Compteur de fichiers chargés, utile pour détecter immédiatement un dossier
+    # vide ou un motif de nommage qui ne correspondrait plus au producteur.
     n_psi = 0
+
+    # Exemple de nom attendu : `psi_f2_ref-normale.csv`. Le glob n'ouvre que les
+    # preuves conformes à cette convention et ignore les autres fichiers.
     for f in RP.glob("psi_f*_ref-*.csv"):
+        # `stem` retire l'extension. On reconstruit ensuite les deux dimensions
+        # encodées dans le nom : fenêtre (`f2` -> `2`) et référence (`normale`).
         fen = f.stem.split("_")[1][1:]
         ref = f.stem.split("ref-")[1]
+
+        # Chaque ligne correspond à une feature. `labels(...).set(...)` crée ou
+        # met à jour la série Prometheus identifiée par ces trois labels.
         for _, r in pd.read_csv(f).iterrows():
             PSI.labels(feature=r["feature"], fenetre=fen, reference=ref).set(float(r["psi"]))
             KSP.labels(feature=r["feature"], fenetre=fen, reference=ref).set(float(r["ks_pvalue"]))
         n_psi += 1
+
+    # Le second jeu de métriques vient du journal consolidé : une ligne par
+    # fenêtre/référence avec les performances métier au seuil gelé.
     n_eval = 0
     suivi = RP / "suivi_fenetres.csv"
     if suivi.exists():
+        # La fenêtre est forcée en texte pour conserver aussi la valeur
+        # « janvier » et produire des labels homogènes.
         df = pd.read_csv(suivi, dtype={"fenetre": str})
         for _, r in df.iterrows():
+            # On parcourt le contrat `MET`. Le test `if c in r` rend l'exporteur
+            # tolérant à un ancien CSV qui ne contiendrait pas encore une
+            # métrique ajoutée plus tard : les autres gauges restent publiées.
             for c, g in MET.items():
                 if c in r:
                     g.labels(fenetre=str(r["fenetre"])).set(float(r[c]))
         n_eval = len(df)
+
+    # Ces nombres ne sont pas des métriques métier ; ils servent seulement au
+    # retour de fonction et à la ligne de diagnostic du terminal.
     return n_psi, n_eval
 
 
+# Démarre le serveur HTTP Prometheus et sa boucle de rafraîchissement.
 def main() -> None:
+    # argparse produit automatiquement `--help` et vérifie les types. Le port
+    # 9109 évite les ports déjà utilisés par l'API (8000) et Prometheus (9090).
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=9109)
+
+    # Un intervalle flottant permet aussi des boucles très courtes en test. En
+    # animation, 15 s suffit pour voir apparaître un nouveau rapport rapidement.
     ap.add_argument("--intervalle", type=float, default=15.0)
+
+    # `--une-fois` sert aux contrôles automatisés : publication, preuve, arrêt.
     ap.add_argument("--une-fois", action="store_true")
     args = ap.parse_args()
+
+    # `start_http_server` lance en arrière-plan un petit serveur qui expose le
+    # registre global des métriques sur `/metrics`. La boucle ci-dessous peut
+    # donc continuer à mettre les gauges à jour pendant que Prometheus scrape.
     start_http_server(args.port)
     print(f"Exporteur drift InduSense : http://localhost:{args.port}/metrics")
+
+    # La boucle relit les CSV au lieu de mettre les résultats en cache : relancer
+    # l'évaluation d'une fenêtre devient visible sans redémarrer l'exporteur.
     while True:
         n_psi, n_eval = publier()
         print(f"  publié : {n_psi} tables PSI · {n_eval} évaluations")
         if args.une_fois:
+            # Sortie déterministe pour les tests et les démonstrations courtes.
             break
+
+        # La pause limite les lectures disque et le bruit dans le terminal.
         time.sleep(args.intervalle)
 
 
