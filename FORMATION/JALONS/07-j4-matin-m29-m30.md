@@ -1,5 +1,8 @@
 # 07 — J4 matin — M29–M30
 
+> Windows, macOS ou Linux : suivre la section Prefect/idempotence du
+> [guide multiplateforme](../GUIDE_MULTIPLATEFORME_APPRENANT.md).
+
 Objectif : passer d'un script a un pipeline orchestre, rejouable et idempotent.
 
 Recu par le jalon : stack M28, squelette `flows/pipeline.py`, donnees locales et
