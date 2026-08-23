@@ -1,5 +1,10 @@
 # Mode d'emploi du parcours progressif
 
+Avant toute commande, choisissez votre environnement dans
+[`GUIDE_MULTIPLATEFORME_APPRENANT.md`](GUIDE_MULTIPLATEFORME_APPRENANT.md) :
+Windows PowerShell, macOS zsh ou Linux bash. Les jalons, tests et preuves restent
+identiques ; seules certaines commandes de shell et certains chemins changent.
+
 ## Une seule fois, au debut du Sprint 3
 
 Dans VS Code, ouvrir **Terminal > Nouveau terminal**, puis saisir :
@@ -59,6 +64,13 @@ fichier precis depuis la branche de sauvegarde.
 
 ```bash
 bash scripts/formation/mettre_a_niveau.sh 03-j2-matin-m25
+bash scripts/formation/verifier_jalon.sh 03-j2-matin-m25
+```
+
+En cas de conflit :
+
+```bash
+bash scripts/formation/mettre_a_niveau.sh 03-j2-matin-m25 --rattrapage
 ```
 
 ## Regles communes
