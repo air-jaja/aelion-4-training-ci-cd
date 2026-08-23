@@ -1,0 +1,48 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "indusense-sprint3-starter"
+version = "0.1.0"
+description = "Starter propre InduSense pour le Sprint 3 CISIA"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "pandas>=2.2",
+    "numpy>=2.0",
+    "scikit-learn>=1.5",
+    "joblib>=1.4",
+    "pydantic-settings>=2.3",
+    "typer>=0.12",
+    "loguru>=0.7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.5",
+    "black>=24.0",
+    "pre-commit>=3.7",
+]
+
+[project.scripts]
+indusense = "indusense.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/indusense"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+extend-exclude = [".venv*", "venv*", "dist", "build"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["B008"]
+
+[tool.black]
+line-length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

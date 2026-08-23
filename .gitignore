@@ -1,0 +1,14 @@
+.venv*/
+venv*/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.env
+dist/
+build/
+*.egg-info/
+!artifacts/models/
+!artifacts/models/.gitkeep
+!artifacts/models/rf.joblib
+!artifacts/models/model_metadata.json
