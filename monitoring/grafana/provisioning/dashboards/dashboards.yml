@@ -1,0 +1,10 @@
+# Provider de dashboards provisionnés (chargés automatiquement au démarrage).
+apiVersion: 1
+providers:
+  - name: indusense
+    orgId: 1
+    folder: ""
+    type: file
+    disableDeletion: false
+    options:
+      path: /etc/grafana/provisioning/dashboards
