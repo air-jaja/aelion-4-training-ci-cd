@@ -1,5 +1,9 @@
 # 08 — J4 apres-midi — M31–M32 PayGuard
 
+> Windows, macOS ou Linux : suivre la section PayGuard du
+> [guide multiplateforme](../GUIDE_MULTIPLATEFORME_APPRENANT.md) pour verifier et
+> extraire l'archive avec l'outil natif du poste.
+
 Objectif : observer un drift adversarial sur la fraude bancaire sans melanger le
 jeu de donnees PayGuard et le fil rouge InduSense.
 
