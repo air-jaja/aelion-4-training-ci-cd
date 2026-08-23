@@ -1,5 +1,8 @@
 # 06 — J3 apres-midi — M28
 
+> Windows, macOS ou Linux : suivre la section Compose du
+> [guide multiplateforme](../GUIDE_MULTIPLATEFORME_APPRENANT.md).
+
 Objectif : orchestrer API, Prometheus et Grafana, puis prouver que la stack sait
 attendre la readiness au lieu de courir au demarrage.
 

@@ -1,5 +1,8 @@
 # 01 — J1 matin — M23
 
+> Windows, macOS ou Linux : suivre la section M23 du
+> [guide multiplateforme](../GUIDE_MULTIPLATEFORME_APPRENANT.md).
+
 Objectif : repartir du paquet de fin S2 et prouver qu'il est importable,
 testable et sans fuite temporelle.
 
