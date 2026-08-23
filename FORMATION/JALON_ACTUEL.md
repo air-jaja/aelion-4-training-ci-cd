@@ -9,8 +9,8 @@ Etat revele pour J2 matin : socle M24 et activite API FastAPI M25.
 - La reference data-science semantique de fin S2 (Marine) reste separee ; ses
   chiffres et artefacts ne sont pas fusionnes avec le RF starter.
 - Donnees, modele RF, metadata, package minimal et tests sont presents.
-- Aucune API, image Docker, orchestration Prefect, mesure de drift ou solution de
-  Game Day n'est revelee dans ce jalon.
+- Aucun garde-fou M26, Dockerfile, orchestration Prefect, drift ou Game Day
+  n'est revele dans ce jalon.
 
 Ce jalon n'est pas nomme `baseline_stagiaire_exacte`, car le dernier checkout
 reel de ce groupe en fin M22 n'est pas present dans les sources locales.
