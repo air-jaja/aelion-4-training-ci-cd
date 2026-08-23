@@ -1,4 +1,18 @@
-# InduSense Sprint 3 Starter
+# InduSense — parcours progressif Sprint 3 CISIA
+
+Ce depot part d'un **socle normalise de fin de Sprint 2**. Il ne contient pas
+d'avance les solutions du Sprint 3 : le formateur revele un jalon cumulatif au
+debut de chaque demi-journee.
+
+Pour demarrer et se mettre a niveau sans perdre son travail, lire
+[`FORMATION/README.md`](FORMATION/README.md). Le calendrier des douze jalons est
+dans [`FORMATION/PLAN_JALONS.md`](FORMATION/PLAN_JALONS.md).
+
+> Regle de securite : travailler sur une branche personnelle, commiter avant
+> chaque mise a niveau et ne jamais recopier de cle, jeton ou mot de passe dans
+> le depot.
+
+## Socle technique fourni
 
 Point de depart propre pour demarrer le Sprint 3 CISIA.
 
@@ -21,7 +35,7 @@ heterogenes. Ce package fournit :
 ```powershell
 cd "C:\chemin\vers\indusense-sprint3-starter"
 uv venv --python 3.13
-uv sync --extra dev
+uv sync --frozen --extra dev
 uv run python --version
 uv run pytest -q
 uv run ruff check .
@@ -34,7 +48,7 @@ uv run indusense --help
 ```bash
 cd /chemin/vers/indusense-sprint3-starter
 uv venv --python 3.13
-uv sync --extra dev
+uv sync --frozen --extra dev
 uv run python --version
 uv run pytest -q
 uv run ruff check .

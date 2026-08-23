@@ -1,0 +1,14 @@
+ordre	jalon	jour	module	publication_prevue
+00	00-fin-sprint2	avant J1	M01-M22	non publie dans ce passage
+01	01-j1-matin-m23	J1 matin	M23	non publie dans ce passage
+02	02-j1-apres-midi-m24	J1 apres-midi	M24	non publie dans ce passage
+03	03-j2-matin-m25	J2 matin	M25	non publie dans ce passage
+04	04-j2-apres-midi-m26	J2 apres-midi	M26	non publie dans ce passage
+05	05-j3-matin-m27	J3 matin	M27	non publie dans ce passage
+06	06-j3-apres-midi-m28	J3 apres-midi	M28 + amorce M29	non publie dans ce passage
+07	07-j4-matin-m29-m30	J4 matin	M29-M30	non publie dans ce passage
+08	08-j4-apres-midi-m31-m32-payguard	J4 apres-midi	M31-M32 PayGuard	non publie dans ce passage
+09	09-j5-matin-m31-m32-indusense	J5 matin	M31-M32 InduSense	non publie dans ce passage
+10	10-j5-apres-midi-m33-m34	J5 apres-midi	M33-M34	non publie dans ce passage
+11	11-j6-matin-gameday	J6 matin	Game Day phases 0-2	non publie dans ce passage
+12	12-j6-apres-midi-retex	J6 apres-midi	Game Day phases 3-6	non publie dans ce passage
