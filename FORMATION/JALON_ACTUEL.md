@@ -1,6 +1,6 @@
-# Jalon actuel : 00-fin-sprint2
+# Jalon actuel : 01-j1-matin-m23
 
-Etat de depart operationnel normalise, avant toute activite en salle du Sprint 3.
+Etat revele pour J1 matin : socle operationnel normalise et activite M23.
 
 - Source locale de provenance : starter remis au precedent groupe au demarrage
   du Sprint 3, commit historique `0d02af0`.
