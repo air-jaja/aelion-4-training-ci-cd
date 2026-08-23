@@ -1,5 +1,8 @@
 # 09 — J5 matin — M31–M32 InduSense
 
+> Windows, macOS ou Linux : suivre la section drift InduSense du
+> [guide multiplateforme](../GUIDE_MULTIPLATEFORME_APPRENANT.md).
+
 Objectif : transferer la methode de drift vers les capteurs InduSense.
 
 Recu par le jalon : donnees de reference et fenetres, fiche TP, scripts de travail
