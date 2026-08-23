@@ -12,6 +12,9 @@ Etat revele pour J1 apres-midi : socle M23 et activite M24 CI/versioning.
 - Aucune API, image Docker, orchestration Prefect, mesure de drift ou solution de
   Game Day n'est revelee dans ce jalon.
 
+Ce jalon n'est pas nomme `baseline_stagiaire_exacte`, car le dernier checkout
+reel de ce groupe en fin M22 n'est pas present dans les sources locales.
+
 Details et empreintes : [`PROVENANCE_SOCLE.md`](PROVENANCE_SOCLE.md).
 
 Preuve attendue :
