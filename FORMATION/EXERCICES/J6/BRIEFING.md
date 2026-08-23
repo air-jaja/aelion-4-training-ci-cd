@@ -11,8 +11,8 @@ quelque chose.
 
 Version de travail auditée :
 
-- branche `J6-gameday` : `dcf9a97abb6475c79f30d2a52ec3e9a3a9103bf3` ;
-- état certifié `v1.0-sain` : `412c96d97811a8f2e5deb8409f59441411deb771`.
+- branche `J6-gameday` : `4f78a522a7100ed2dd8cfd9cd553e138d4e61d46` ;
+- état certifié `v1.0-sain` : `88d5af507f12a429599ed803adafa74c6610530e`.
 
 Mission du jour, par ordre de priorité :
 
