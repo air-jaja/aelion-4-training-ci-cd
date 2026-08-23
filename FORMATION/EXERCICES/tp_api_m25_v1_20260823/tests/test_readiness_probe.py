@@ -42,7 +42,7 @@ def test_ready_returns_exact_503_when_model_is_unavailable() -> None:
         response = client.get("/ready")
 
     assert response.status_code == 503
-    assert response.json() == {"detail": "Modèle non chargé"}
+    assert response.json() == {"detail": "Modele non charge"}
 
 
 def test_predict_tabular_returns_exact_503_after_auth_and_validation() -> None:
@@ -54,4 +54,4 @@ def test_predict_tabular_returns_exact_503_after_auth_and_validation() -> None:
         )
 
     assert response.status_code == 503
-    assert response.json() == {"detail": "Modèle non chargé"}
+    assert response.json() == {"detail": "Modele non charge"}
