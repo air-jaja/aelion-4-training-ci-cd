@@ -1,13 +1,18 @@
 # Jalon actuel : 00-fin-sprint2
 
-Etat de depart normalise, avant toute activite du Sprint 3.
+Etat de depart operationnel normalise, avant toute activite en salle du Sprint 3.
 
-- Source locale de provenance : historique du precedent fil rouge InduSense.
-- Arbre de reference initial : commit historique `0d02af0` du starter Sprint 3
-  precedent, lui-meme construit a la charniere des modules 1 a 22.
+- Source locale de provenance : starter remis au precedent groupe au demarrage
+  du Sprint 3, commit historique `0d02af0`.
+- Ce n'est pas un snapshot « fin S2 pur » : le package, les tests, la CI et
+  pre-commit amorcent volontairement M23/M24 pour garantir un depart commun.
+- La reference data-science semantique de fin S2 (Marine) reste separee ; ses
+  chiffres et artefacts ne sont pas fusionnes avec le RF starter.
 - Donnees, modele RF, metadata, package minimal et tests sont presents.
 - Aucune API, image Docker, orchestration Prefect, mesure de drift ou solution de
   Game Day n'est revelee dans ce jalon.
+
+Details et empreintes : [`PROVENANCE_SOCLE.md`](PROVENANCE_SOCLE.md).
 
 Preuve attendue :
 

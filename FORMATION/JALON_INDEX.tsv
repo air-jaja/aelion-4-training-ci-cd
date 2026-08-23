@@ -5,7 +5,7 @@ ordre	jalon	jour	module	publication_prevue
 03	03-j2-matin-m25	J2 matin	M25	non publie dans ce passage
 04	04-j2-apres-midi-m26	J2 apres-midi	M26	non publie dans ce passage
 05	05-j3-matin-m27	J3 matin	M27	non publie dans ce passage
-06	06-j3-apres-midi-m28	J3 apres-midi	M28 + amorce M29	non publie dans ce passage
+06	06-j3-apres-midi-m28	J3 apres-midi	M28	non publie dans ce passage
 07	07-j4-matin-m29-m30	J4 matin	M29-M30	non publie dans ce passage
 08	08-j4-apres-midi-m31-m32-payguard	J4 apres-midi	M31-M32 PayGuard	non publie dans ce passage
 09	09-j5-matin-m31-m32-indusense	J5 matin	M31-M32 InduSense	non publie dans ce passage
