@@ -1,5 +1,8 @@
 # 04 — J2 apres-midi — M26
 
+> Windows, macOS ou Linux : suivre la section M26 du
+> [guide multiplateforme](../GUIDE_MULTIPLATEFORME_APPRENANT.md).
+
 Objectif : modeliser les menaces puis durcir l'API sans rendre la politique de
 securite surchargeable par le client.
 
