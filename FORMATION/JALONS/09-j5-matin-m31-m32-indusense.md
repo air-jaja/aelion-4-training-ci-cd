@@ -18,3 +18,12 @@ uv run pytest tests/test_drift_monitoring.py -q
 
 Rattrapage : une reference, une fenetre, une feature, une decision ; les fenetres
 supplementaires forment la reserve.
+
+### Garde-fou Windows : chemin court
+
+Le TP autonome doit etre place dans un chemin court, par exemple
+`C:\CISIA\tp_drift_indusense`. Un checkout tres profond peut depasser la limite
+de chargement d'une extension compilee scikit-learn et produire un trompeur
+`ModuleNotFoundError: ..._datasets_pair` alors que le fichier est present.
+Deplacer/copier le TP vers un chemin court, puis relancer `uv sync --frozen
+--extra dev`; ne pas modifier le lock pour masquer ce probleme de chemin.
