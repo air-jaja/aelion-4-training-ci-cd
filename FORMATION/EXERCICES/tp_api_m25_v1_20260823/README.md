@@ -1,7 +1,7 @@
 # Surcouche de preuves M25 — API et Model Card
 
-Version : **v1 — 23/08/2026**. Cette ressource complète le dépôt canonique
-`CISIA_29062026` sans le remplacer. Elle ajoute deux tests 503 et une porte de
+Version : **v2 multiplateforme — 23/08/2026**. Cette ressource complète le dépôt
+CISIA ouvert par l'apprenant sans le remplacer. Elle ajoute deux tests 503 et une porte de
 Model Card fondée sur la structure, le statut des informations et leurs preuves.
 
 ## Ce que la surcouche prouve
@@ -41,6 +41,29 @@ if ($LASTEXITCODE -ne 0) { throw 'La structure/provenance de la Model Card écho
 
 git status --short -- uv.lock
 # attendu : aucune ligne
+```
+
+## Installation commune Windows, macOS et Linux avec Python
+
+Depuis la racine du dépôt progressif, la surcouche est déjà disponible sous
+`FORMATION/EXERCICES/tp_api_m25_v1_20260823`. Cette commande utilise le Python
+3.13 géré par `uv`, conserve les fichiers différents dans le dossier temporaire
+du système, préserve une Model Card existante et vérifie que `uv.lock` ne change
+pas :
+
+```text
+uv run python FORMATION/EXERCICES/tp_api_m25_v1_20260823/APPLIQUER_PREUVES_M25.py .
+uv sync --frozen --extra dev
+uv run pytest -q tests/test_api.py tests/test_readiness_probe.py tests/test_model_card_gate.py
+uv run python scripts/validate_model_card.py docs/model_card.md --project-root .
+git status --short -- uv.lock
+```
+
+Si le dossier M25 a été remis à côté d'un autre clone, adaptez uniquement son
+chemin, par exemple :
+
+```text
+uv run python ../tp_api_m25_v1_20260823/APPLIQUER_PREUVES_M25.py .
 ```
 
 Résultat attendu avec le dépôt canonique et le modèle de carte livré :
