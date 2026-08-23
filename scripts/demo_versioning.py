@@ -30,6 +30,7 @@ Tout est idempotent et pilotable :  --no-mlflow / --no-dvc / --remote ...
     uv run python scripts/demo_versioning.py
     uv run python scripts/demo_versioning.py --remote /tmp/dvc-store
 """
+
 from __future__ import annotations  # annotations de type modernes
 
 import argparse  # options de ligne de commande
