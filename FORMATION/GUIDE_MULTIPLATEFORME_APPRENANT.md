@@ -43,7 +43,7 @@ projet : rouvrez le bon dossier dans VS Code.
 
 ## 2. Préflight commun
 
-Ces commandes sont identiques sur les trois systèmes :
+Requis dès J1, avec les mêmes commandes sur les trois systèmes :
 
 ```text
 git --version
@@ -52,6 +52,11 @@ uv sync --frozen --extra dev
 uv run python --version
 uv run pytest -q
 uv run ruff check .
+```
+
+Docker n'est requis qu'avant J3. A ce moment, ajoutez :
+
+```text
 docker --version
 docker compose version
 ```
@@ -96,6 +101,21 @@ Pour Docker, Windows et macOS utilisent normalement Docker Desktop. Linux peut
 utiliser Docker Desktop ou Docker Engine avec le plugin Compose. Dans tous les
 cas, la commande attendue est `docker compose`, jamais l'ancien
 `docker-compose`.
+
+Si le pack demande encore d'appliquer le correctif dépôt sur macOS/Linux,
+commencez par un `git status --short` vide, puis utilisez le patch fourni :
+
+```bash
+patch_file="/chemin/vers/correctif_depot_sprint3/correctif_depot_sprint3.patch"
+git apply --check "$patch_file"
+git apply "$patch_file"
+uv sync --frozen --extra dev
+uv run pytest -q
+```
+
+Si `git apply --check` échoue, ne forcez pas. La correction peut être déjà
+présente ou le dépôt peut contenir du travail différent ; montrez le diagnostic
+au formateur.
 
 ## 3. Traductions indispensables
 
@@ -175,6 +195,20 @@ uv run indusense --help
 Ouvrez les fichiers depuis l'Explorateur VS Code. Les chemins affichés avec `/`
 restent valides sous Windows.
 
+Pour la démonstration Gitleaks sur macOS/Linux :
+
+```bash
+cat > fuite_demo.txt <<'EOF'
+# Valeurs d'exemple publiques et invalides.
+AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
+AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+EOF
+git add -f -- fuite_demo.txt
+uv run pre-commit run gitleaks --files fuite_demo.txt
+git restore --staged -- fuite_demo.txt
+rm -- fuite_demo.txt
+```
+
 ## 6. M24 - pre-commit, DVC et MLflow
 
 Commandes communes :
@@ -234,17 +268,19 @@ xdg-open http://127.0.0.1:8000/docs >/dev/null 2>&1 &
 Si l'ouverture automatique du navigateur échoue, copiez simplement l'URL dans
 Chrome ou Firefox. Arrêtez Uvicorn avec `Ctrl+C` dans le terminal 1.
 
-Pour appliquer le paquet de preuves M25 lorsqu'il est remis séparément :
+Pour appliquer le paquet de preuves M25 sur les trois systèmes, synchronisez
+d'abord sans muter le lock, puis lancez l'applicateur Python commun :
 
-```powershell
-# Windows, depuis la racine du projet
-$overlay = (Resolve-Path -LiteralPath '..\tp_api_m25_v1_20260823').Path
-& (Join-Path $overlay 'APPLIQUER_PREUVES_M25.ps1') -ProjectPath .
+```text
+uv sync --frozen --extra dev
+uv run --frozen python FORMATION/EXERCICES/tp_api_m25_v1_20260823/APPLIQUER_PREUVES_M25.py .
 ```
 
-```bash
-# macOS ou Linux, depuis la racine du projet
-bash ../tp_api_m25_v1_20260823/APPLIQUER_PREUVES_M25.sh .
+Si le dossier M25 a été remis à côté du clone, adaptez uniquement son chemin :
+
+```text
+uv sync --frozen --extra dev
+uv run --frozen python ../tp_api_m25_v1_20260823/APPLIQUER_PREUVES_M25.py .
 ```
 
 ## 8. M26 - sécurité
@@ -331,6 +367,51 @@ db_path="${TMPDIR:-/tmp}/indusense-preuve.db"
 
 Ne réutilisez pas une base existante comme preuve d'idempotence.
 
+Exécution complète depuis l'hôte Windows :
+
+```powershell
+$env:PREFECT_PROFILE = 'ephemeral'
+$env:PREFECT_SERVER_ANALYTICS_ENABLED = 'false'
+$env:PREFECT_CLOUD_ENABLE_ORCHESTRATION_TELEMETRY = 'false'
+$env:INDUSENSE_DATA_DIR = 'C:\CHEMIN\VERS\DONNEES_COMPLETES'
+$sourceData = (Resolve-Path -LiteralPath $env:INDUSENSE_DATA_DIR).Path
+$env:COMPOSE_PROJECT_NAME = 'cisia_m30_' + (Get-Date -Format 'yyyyMMdd_HHmmss')
+docker compose up -d --wait db
+docker compose run --rm --no-deps `
+  -e PREFECT_PROFILE=ephemeral `
+  -e INDUSENSE_DATA_DIR=/app/data/run `
+  --volume "${sourceData}:/app/data/run:ro" `
+  api python -m indusense.flows.predict_flow
+$qaDir = Join-Path $env:TEMP ('cisia_m30_' + (Get-Date -Format 'yyyyMMdd_HHmmss'))
+New-Item -ItemType Directory -Path $qaDir | Out-Null
+$dbPath = Join-Path $qaDir 'predictions.db'
+$env:INDUSENSE_DB_URL = 'sqlite:///' + ($dbPath -replace '\\','/')
+```
+
+Exécution équivalente sous macOS/Linux :
+
+```bash
+set -euo pipefail
+export PREFECT_PROFILE=ephemeral
+export PREFECT_SERVER_ANALYTICS_ENABLED=false
+export PREFECT_CLOUD_ENABLE_ORCHESTRATION_TELEMETRY=false
+export INDUSENSE_DATA_DIR="$HOME/CISIA/donnees-completes"
+source_data="$(cd "$INDUSENSE_DATA_DIR" && pwd -P)"
+export COMPOSE_PROJECT_NAME="cisia_m30_$(date +%Y%m%d_%H%M%S)"
+docker compose up -d --wait db
+docker compose run --rm --no-deps \
+  -e PREFECT_PROFILE=ephemeral \
+  -e INDUSENSE_DATA_DIR=/app/data/run \
+  --volume "$source_data:/app/data/run:ro" \
+  api python -m indusense.flows.predict_flow
+qa_dir="$(mktemp -d "${TMPDIR:-/tmp}/cisia_m30.XXXXXX")"
+export INDUSENSE_DB_URL="sqlite:///$qa_dir/predictions.db"
+```
+
+Sur macOS, Docker Desktop doit autoriser le partage du dossier source. Sous un
+Linux avec SELinux enforcing, le formateur peut valider un montage `:ro,Z` ; ne
+changez pas ce suffixe au hasard.
+
 ## 11. M31 et M32 - PayGuard
 
 Vérifier l'archive avant extraction :
@@ -403,6 +484,34 @@ grep -nE 'drift_events|cooldown_hours|INSERT INTO' ./scripts/alerting_demo.py
 
 ## 13. M33 et M34 - Prometheus, Grafana et Locust
 
+Si le pack et le dépôt sont deux dossiers différents, résolvez leurs chemins.
+
+```powershell
+# Windows, lancé depuis la racine du pack
+$packRoot = (Get-Location).Path
+$projectRoot = (Resolve-Path -LiteralPath (Read-Host 'Chemin complet du dépôt CISIA')).Path
+$payload = Join-Path $packRoot 'payload.json'
+$locustfile = Join-Path $packRoot 'perf\locustfile.py'
+@($projectRoot, $payload, $locustfile) | ForEach-Object {
+    if (-not (Test-Path -LiteralPath $_)) { throw "Introuvable : $_" }
+}
+Set-Location -LiteralPath $projectRoot
+```
+
+```bash
+# macOS ou Linux, lancé depuis la racine du pack
+set -euo pipefail
+pack_root="$(pwd -P)"
+read -r -p 'Chemin complet du dépôt CISIA : ' project_input
+project_root="$(cd "$project_input" && pwd -P)"
+payload="$pack_root/payload.json"
+locustfile="$pack_root/perf/locustfile.py"
+for path in "$project_root" "$payload" "$locustfile"; do
+  test -e "$path" || { echo "Introuvable : $path" >&2; exit 1; }
+done
+cd "$project_root"
+```
+
 Terminal 1, commande commune à laisser active :
 
 ```text
@@ -443,10 +552,29 @@ extra_hosts:
   - "host.docker.internal:host-gateway"
 ```
 
-Vérification :
+Vérification portable via l'API de Prometheus :
 
-```text
-docker compose exec prometheus getent hosts host.docker.internal
+```powershell
+# Windows
+(Invoke-RestMethod http://127.0.0.1:9090/api/v1/targets).data.activeTargets |
+  Select-Object -ExpandProperty health
+```
+
+```bash
+# macOS et Linux
+curl -fsS http://127.0.0.1:9090/api/v1/targets | uv run python -m json.tool
+```
+
+Lancer Locust depuis le même terminal où les chemins ont été définis :
+
+```powershell
+# Windows
+uv run locust -f $locustfile --host http://127.0.0.1:8000
+```
+
+```bash
+# macOS et Linux
+uv run locust -f "$locustfile" --host http://127.0.0.1:8000
 ```
 
 ## 14. J6 - Game Day hors ligne
