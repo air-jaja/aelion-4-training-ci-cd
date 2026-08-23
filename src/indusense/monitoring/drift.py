@@ -33,12 +33,35 @@ def psi(ref, cur, bins: int = 10) -> float:
       - lissage +1e-6 : évite ln(0) sur les bins vides ;
       - les NaN (vraies données capteurs !) sont écartés feature par feature.
     """
+    # `pd.Series(...)` accepte aussi bien une liste, une série pandas qu'un
+    # tableau NumPy. Le passage par `dropna()` retire les mesures manquantes :
+    # le PSI doit comparer des valeurs observées, pas transformer NaN en nombre.
+    # `np.asarray(..., dtype=float)` donne ensuite un format numérique homogène
+    # compris par les fonctions d'histogramme, quel que soit le type d'entrée.
     ref = np.asarray(pd.Series(ref).dropna(), dtype=float)
     cur = np.asarray(pd.Series(cur).dropna(), dtype=float)
+
+    # Les tranches sont calculées UNE FOIS sur la référence. On fige ainsi la
+    # règle de mesure : deux fenêtres de production sont comparées avec la même
+    # « règle graduée ». Recalculer les bins sur `cur` masquerait une dérive.
     edges = np.histogram_bin_edges(ref, bins=bins)
+
+    # NumPy ignore normalement les valeurs situées hors des bords. En ouvrant
+    # les deux extrémités, toute valeur courante très basse ou très haute tombe
+    # dans un bin de bord au lieu de disparaître silencieusement du calcul.
     edges[0], edges[-1] = -np.inf, np.inf
+
+    # `np.histogram(...)[0]` renvoie les EFFECTIFS par tranche. On divise par la
+    # taille de l'échantillon pour obtenir des PROPORTIONS comparables lorsque
+    # référence et production n'ont pas le même nombre de lignes.
+    # Le petit epsilon empêche une division par zéro et `log(0)` si un bin est
+    # vide. Cette convention doit rester figée dans la drift spec du projet.
     p_ref = np.histogram(ref, edges)[0] / len(ref) + 1e-6
     p_cur = np.histogram(cur, edges)[0] / len(cur) + 1e-6
+
+    # Formule, bin par bin : déplacement de masse × logarithme du rapport.
+    # `np.sum` agrège toutes les contributions ; `float` renvoie un nombre
+    # Python simple, facile à sérialiser ensuite dans un CSV ou un rapport JSON.
     return float(np.sum((p_cur - p_ref) * np.log(p_cur / p_ref)))
 
 
@@ -47,11 +70,18 @@ def ks_pvalue(ref, cur) -> float:
 
     Attention à grands n : significatif ≠ important — voir psi() pour l'ampleur.
     """
+    # `ks_2samp` compare les fonctions de répartition empiriques des deux
+    # échantillons. Seule la p-value est exposée ici : le reste du projet attend
+    # un scalaire sérialisable, pas l'objet résultat complet de SciPy.
+    # Comme pour le PSI, on écarte les NaN feature par feature.
     return float(stats.ks_2samp(pd.Series(ref).dropna(), pd.Series(cur).dropna()).pvalue)
 
 
 def verdict_psi(valeur: float) -> str:
     """Verdict lisible selon les seuils du cours."""
+    # L'ordre des tests est important : on traite d'abord le cas le plus faible,
+    # puis la zone intermédiaire. Tout ce qui reste est donc une dérive forte.
+    # Les bornes exactes (0,10 et 0,25) passent dans la catégorie supérieure.
     if valeur < SEUIL_PSI_SURVEILLER:
         return "OK RAS"
     if valeur < SEUIL_PSI_FORT:
@@ -66,15 +96,23 @@ def drift_table(
     bins: int = 10,
 ) -> pd.DataFrame:
     """Table de dérive : une ligne par feature (psi, ks_pvalue, verdict), tri PSI desc."""
+    # Une ligne de sortie regroupe les deux mesures complémentaires et le
+    # verdict lisible. On conserve le nom de feature pour alimenter ensuite les
+    # tableaux, les fichiers CSV et les labels Prometheus.
     lignes = [
         {
             "feature": f,
+            # Le PSI mesure l'ampleur du déplacement.
             "psi": psi(df_ref[f], df_cur[f], bins=bins),
+            # KS répond à la question statistique « différence détectable ? ».
             "ks_pvalue": ks_pvalue(df_ref[f], df_cur[f]),
+            # Le verdict transforme la valeur continue en consigne exploitable.
             "verdict": verdict_psi(psi(df_ref[f], df_cur[f], bins=bins)),
         }
         for f in features
     ]
+    # Le tri décroissant fait remonter les features les plus préoccupantes.
+    # `reset_index(drop=True)` fournit un index propre 0..n-1 après le tri.
     return pd.DataFrame(lignes).sort_values("psi", ascending=False).reset_index(drop=True)
 
 
@@ -90,14 +128,24 @@ def drift_report(
     C'est le « rapport JSON maison » branché dans le flow après predict ;
     Evidently est l'alternative outillée (même contrat de sortie côté décision).
     """
+    # On part de la table humaine validée plus haut afin de ne pas maintenir une
+    # seconde implémentation des calculs PSI/KS dans la couche « rapport ».
     table = drift_table(df_ref, df_cur, features=features, bins=bins)
+
+    # `to_dict("records")` transforme chaque ligne en dictionnaire. La
+    # compréhension suivante construit un objet indexé par feature, plus facile
+    # à consommer par une API ou une task Prefect qu'un DataFrame pandas.
     contenu = {
         r["feature"]: {
+            # Arrondir le PSI stabilise l'affichage et allège le JSON ; la
+            # décision booléenne est prise AVANT sur la valeur non arrondie.
             "psi": round(float(r["psi"]), 4),
             "ks_p": float(r["ks_pvalue"]),
             "drift": bool(r["psi"] > psi_threshold),
         }
         for r in table.to_dict("records")
     }
+    # Le verdict global suit une logique « au moins une feature en dérive ».
+    # `any(...)` s'arrête dès qu'un `True` est rencontré et renvoie un booléen.
     contenu["_global"] = {"drift": any(v["drift"] for v in contenu.values())}
     return contenu
