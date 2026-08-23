@@ -8,7 +8,6 @@ from pathlib import Path
 
 from locust import HttpUser, between, task
 
-
 SPRINT_ROOT = Path(__file__).resolve().parents[1]
 PAYLOAD_PATH = SPRINT_ROOT / "payload.json"
 
