@@ -7,9 +7,10 @@ identiques ; seules certaines commandes de shell et certains chemins changent.
 
 ## Une seule fois, au debut du Sprint 3
 
-Dans VS Code, ouvrir **Terminal > Nouveau terminal**, puis saisir :
+Dans VS Code, ouvrir **Terminal > Nouveau terminal**, puis saisir dans le
+terminal de votre systeme :
 
-```powershell
+```text
 git clone https://github.com/thomasfesq/CISIA_24082026_Parcours.git
 cd CISIA_24082026_Parcours
 git switch -c prenom-nom
@@ -24,7 +25,7 @@ Ne pas travailler directement sur `main` ou sur une branche `jalon/...`.
 
 1. Enregistrer son travail actuel :
 
-```powershell
+```text
 git status
 git add -A
 git commit -m "travail avant nouveau jalon"
