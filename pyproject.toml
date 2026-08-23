@@ -115,6 +115,9 @@ ignore = ["B008"]
 [tool.black]
 # Meme largeur de ligne que ruff (les deux outils restent coherents).
 line-length = 100
+# Les exercices sont des projets autonomes avec leur propre pyproject.toml.
+# Le controle qualite du depot racine ne doit donc pas leur imposer ses regles.
+extend-exclude = '(^|/)FORMATION/EXERCICES/'
 
 # --- [tool.pytest.ini_options] : configuration des tests pytest -------------
 [tool.pytest.ini_options]
