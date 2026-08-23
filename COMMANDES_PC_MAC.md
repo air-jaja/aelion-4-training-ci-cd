@@ -55,32 +55,53 @@ uv python install 3.13
 Si Homebrew n'est pas installe :
 
 ```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-## 3. Installation du package apprenant
+## 3. Preflight Linux Terminal
+
+```bash
+python3 --version
+uv --version
+git --version
+docker --version
+docker compose version
+```
+
+Installation minimale de `uv` sans modifier Python systeme :
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+uv python install 3.13
+```
+
+Pour Git, Docker Engine et le plugin Compose, utiliser le gestionnaire de
+paquets de la distribution avec l'accord du formateur. Ne pas improviser une
+commande `sudo` pendant une sequence de cours.
+
+## 4. Installation du package apprenant
 
 ### Windows
 
 ```powershell
 cd "C:\chemin\vers\indusense-sprint3-starter"
 uv venv --python 3.13
-uv sync --extra dev
+uv sync --frozen --extra dev
 uv run python --version
 ```
 
-### macOS
+### macOS ou Linux
 
 ```bash
 cd /chemin/vers/indusense-sprint3-starter
 uv venv --python 3.13
-uv sync --extra dev
+uv sync --frozen --extra dev
 uv run python --version
 ```
 
 Attendu : Python 3.13.x.
 
-## 4. Tests de validation du poste
+## 5. Tests de validation du poste
 
 ```bash
 uv run python -c "import indusense; print(indusense.__file__)"
@@ -102,12 +123,12 @@ Attendu :
 - donnees sample chargees.
 - dataset gold regenerable.
 
-## 5. Commandes Sprint 3 J1
+## 6. Commandes Sprint 3 J1
 
 Matin module 23 :
 
-```bash
-uv sync --extra dev
+```text
+uv sync --frozen --extra dev
 uv run pytest tests/test_temporal.py -q
 uv run pytest tests/test_loaders.py -q
 uv run ruff check .
@@ -116,14 +137,17 @@ uv run indusense --help
 
 Apres-midi module 24 :
 
-```bash
+```text
 uv run pre-commit install
 uv run pre-commit run --all-files
-uv add dvc mlflow
-uv lock
+uv sync --frozen --extra dev --extra mlops
+git diff --exit-code -- uv.lock
 ```
 
-## 6. Si uv n'est pas trouve
+Ne pas lancer `uv add` ni `uv lock` : le verrou fourni est commun aux trois
+systemes et doit rester identique.
+
+## 7. Si uv n'est pas trouve
 
 Windows :
 
@@ -135,6 +159,12 @@ macOS :
 
 ```bash
 brew install uv
+```
+
+Linux, ou macOS sans Homebrew :
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
 Fermer et rouvrir le terminal apres installation.
