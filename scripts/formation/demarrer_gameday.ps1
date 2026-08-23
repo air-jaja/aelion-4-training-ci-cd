@@ -27,11 +27,17 @@ if (Test-Path -LiteralPath $absoluteDestination) {
 & git clone -b J6-gameday $bundle $absoluteDestination
 if ($LASTEXITCODE -ne 0) { throw 'Clone du bundle Game Day echoue.' }
 
+& git -C $absoluteDestination remote rename origin bundle-local
+if ($LASTEXITCODE -ne 0) { throw 'Renommage du remote local echoue.' }
+& git -C $absoluteDestination remote set-url --push bundle-local DISABLED
+if ($LASTEXITCODE -ne 0) { throw 'Neutralisation du push vers le bundle echouee.' }
+
 & git -C $absoluteDestination switch -c "reparation-$Binome"
 if ($LASTEXITCODE -ne 0) { throw 'Creation de la branche de reparation echouee.' }
 
-& git -C $absoluteDestination rev-parse --verify v1.0-sain
+& git -C $absoluteDestination rev-parse --verify 'v1.0-sain^{commit}'
 if ($LASTEXITCODE -ne 0) { throw 'Tag sain absent du clone.' }
 
 Write-Host "Game Day pret : $absoluteDestination"
 Write-Host "Branche de travail : reparation-$Binome"
+Write-Host 'Remote local : bundle-local (lecture seule pedagogique ; ne pas pousser)'

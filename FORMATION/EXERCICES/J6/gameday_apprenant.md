@@ -1,19 +1,19 @@
 # Game Day J6 — Opération « lundi matin » : réparer InduSense
 
 > **Format — scénario A retenu :** journée J6, **jeudi 03/09/2026**, soit 7 h après les **35 h de modules** du Sprint 3 (**42 h au total**), en binômes ou en solo, au choix. En scénario B strict, le Game Day vient après 42 h de modules, sur un **septième jour à planifier** : **49 h / 7 jours au total**. **Prérequis :** le Sprint 3 (le dépôt à réparer est
-> VOTRE dépôt fil rouge, saboté) · **Matériel :** le dépôt `github.com/thomasfesq/CISIA_29062026`, branche **`J6-gameday`**
-> (URL rappelée par le formateur), Docker Desktop démarré.
+> VOTRE dépôt fil rouge, saboté) · **Matériel :** le bundle local
+> `FORMATION/EXERCICES/J6/J6-gameday.bundle`, Docker démarré.
 > **Livrables de fin de journée :** ① le dépôt réparé — suite pytest **entièrement verte** avec des
 > tests identiques à `v1.0-sain`, pipeline de données conforme aux chiffres de référence, API saine,
-> stack compose vivante (API + Prometheus + Grafana) — poussé sur votre branche personnelle
-> (convention `reparation-identifiant`, ou sur votre fork) · ② un
+> stack compose vivante (API + Prometheus + Grafana) — commité sur votre branche personnelle
+> locale (convention `reparation-identifiant`) · ② un
 > **post-mortem** d'une page (gabarit en fin de document) · ③ une restitution de **4 min maximum**.
 > **La règle d'or :** chaque correctif est **diagnostiqué** (symptôme → cause racine), **corrigé**,
 > **prouvé** (test/commande), **commité** (message clair). Un correctif non commité n'existe pas.
 >
 > **Version de travail auditée :** `J6-gameday` au commit
-> `dcf9a97abb6475c79f30d2a52ec3e9a3a9103bf3` ; état certifié `v1.0-sain` au commit
-> `412c96d97811a8f2e5deb8409f59441411deb771`.
+> `4f78a522a7100ed2dd8cfd9cd553e138d4e61d46` ; état certifié `v1.0-sain` au commit
+> `88d5af507f12a429599ed803adafa74c6610530e`.
 
 ## Le brief
 
@@ -49,23 +49,28 @@ la journée. **Indice structurel :** le tag `v1.0-sain` pointe sur le dernier é
 phase 5 15h45-16h15 · phase 6 16h15-16h45 · débrief 16h45-17h00.
 
 ```powershell
-# le Game Day vit sur la branche J6-gameday du dépôt fil rouge :
-# https://github.com/thomasfesq/CISIA_29062026/tree/J6-gameday
-git clone -b J6-gameday https://github.com/thomasfesq/CISIA_29062026.git indusense-gameday
-cd indusense-gameday
-$binome = (Read-Host 'Identifiant du binôme, sans espace (ex. equipe01)').Trim()
-if ($binome -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$') { throw 'Identifiant invalide : lettres, chiffres, point, tiret ou underscore uniquement.' }
-$branchName = "reparation-$binome"
-git switch -c $branchName                # VOTRE branche de travail (jamais sur J6-gameday direct)
-git log --oneline --decorate             # que s'est-il passé, et quand ?
-git tag                                  # où est l'état de confiance ?
-git diff --stat v1.0-sain J6-gameday    # votre périmètre de suspicion
+# Windows, depuis la racine du parcours progressif
+powershell -ExecutionPolicy Bypass -File .\scripts\formation\demarrer_gameday.ps1 -Binome equipe01
 ```
 
-*(Selon la consigne du formateur : travaillez sur votre **fork** du dépôt, ou poussez la branche
-stockée dans `$branchName` — jamais sur `main` ni `J6-gameday`. Si vous utilisez un fork, clonez l'URL
-de **votre fork** ou vérifiez avec `git remote -v` que `origin` pointe vers celui-ci ; le dépôt du
-formateur peut être ajouté comme `upstream`.)*
+```bash
+# macOS zsh ou Linux bash, depuis la racine du parcours progressif
+bash scripts/formation/demarrer_gameday.sh equipe01
+```
+
+Ouvrez ensuite le dossier `CISIA_J6_GAMEDAY_equipe01` créé à côté du parcours,
+puis lancez dans son terminal :
+
+```text
+git log --oneline --decorate
+git tag
+git diff --stat v1.0-sain J6-gameday
+git remote -v
+```
+
+Le seul remote attendu est `bundle-local`, qui pointe vers le fichier local et
+ne doit pas recevoir de push. Si le formateur fournit un dépôt de collaboration,
+suivez uniquement sa consigne explicite pour ajouter un remote séparé.
 
 Lisez `BRIEFING.md` et le README, ouvrez votre post-mortem, démarrez la **timeline**.
 > 💡 **Tout au long de la journée**, chaque phase se termine par sa **definition of done** (vos preuves
@@ -167,7 +172,7 @@ uv run pytest -q          # la suite COMPLÈTE, cette fois
   Le module `indusense.monitoring.drift` est-il d'accord avec le cours ?
 - ❓ **La question qui fâche :** quand tout semblera vert… vos tests prouvent-ils encore quelque
   chose ? `git diff v1.0-sain -- tests/` — un contrat, ça se relit. Restaurez ce qui doit l'être
-  (`git checkout v1.0-sain -- tests/<fichier>`), puis re-testez.
+  (`git restore --source v1.0-sain -- tests/test_api.py`, en adaptant le vrai nom), puis re-testez.
 - ✅ **Bonne pratique :** les tests se réparent par **restauration depuis l'état certifié**, le
   code par **compréhension**. Jamais l'inverse.
 - **À retenir :** 401 = authentification (pas 422 : le problème n'est pas la forme) · une politique
@@ -263,19 +268,18 @@ git diff v1.0-sain -- .github/
 
 **Compétences travaillées :** C9 (amélioration continue : « qui garde les gardiens ») · C6.
 
-Poussez ensuite **votre branche uniquement** :
+Conservez d'abord **votre branche locale** et prouvez son état :
 
-```powershell
-$branchName = (git branch --show-current).Trim()
-if ($branchName -notlike 'reparation-*') { throw "Branche inattendue : $branchName" }
-git push -u origin $branchName
+```text
+git branch --show-current
+git status --short
+git log -1 --oneline
 ```
 
-Dans GitHub : **Pull requests → New pull request** · base = `main` · compare = la branche affichée
-par `$branchName` (par exemple `reparation-equipe01`) · **Create draft pull request**. Sur un fork, sélectionnez votre fork comme
-dépôt source. Les contrôles de la CI se déclenchent sur la PR, pas sur un simple push de branche.
-Si Actions est désactivé sur votre fork, conservez les preuves locales et faites marquer la preuve
-distante « à rejouer » par le formateur.
+N'exécutez pas `git push` vers `bundle-local`. Si, le jour J, le formateur donne
+une URL et demande une preuve distante, ajoutez-la sous le nom `collaboration`
+et poussez uniquement `reparation-equipe01` vers ce remote. Sans cette consigne,
+les commits locaux, les tests et le post-mortem constituent le livrable.
 
 🛑 **Definition of done — phase 5 :** workflow restauré, `git log --oneline` lisible (~12-15 commits racontant la
 réparation), branche poussée, **PR draft ouverte**, contrôles verts POUR LES BONNES RAISONS.
