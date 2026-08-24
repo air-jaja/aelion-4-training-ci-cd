@@ -34,17 +34,18 @@ git commit -m "travail avant nouveau jalon"
 2. Lancer le jalon annonce par le formateur, par exemple :
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\formation\mettre_a_niveau.ps1 -Jalon 03-j2-matin-m25
+powershell -ExecutionPolicy Bypass -File .\scripts\formation\mettre_a_niveau.ps1 -Jalon 03
 ```
 
-Le script effectue bien un `git pull` du jalon officiel. Avant cela, il cree une
+Le numero correspond exactement a la branche publique `jalon/03`. Le script
+effectue un `git pull` de ce jalon officiel. Avant cela, il cree une
 branche locale `sauvegarde/...` pointant sur l'etat courant. Il ne supprime ni ne
 reecrit aucun commit.
 
 3. Verifier l'etat recu :
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\formation\verifier_jalon.ps1 -Jalon 03-j2-matin-m25
+powershell -ExecutionPolicy Bypass -File .\scripts\formation\verifier_jalon.ps1 -Jalon 03
 ```
 
 ## Si une fusion entre en conflit
@@ -54,7 +55,7 @@ dans la branche `sauvegarde/...`. Pour repartir immediatement du jalon officiel
 sans perdre cette copie :
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\formation\mettre_a_niveau.ps1 -Jalon 03-j2-matin-m25 -Rattrapage
+powershell -ExecutionPolicy Bypass -File .\scripts\formation\mettre_a_niveau.ps1 -Jalon 03 -Rattrapage
 ```
 
 Le mode rattrapage cree une nouvelle branche `rattrapage/...`. Il ne fait aucun
@@ -64,19 +65,23 @@ fichier precis depuis la branche de sauvegarde.
 ## Sur macOS ou Linux
 
 ```bash
-bash scripts/formation/mettre_a_niveau.sh 03-j2-matin-m25
-bash scripts/formation/verifier_jalon.sh 03-j2-matin-m25
+bash scripts/formation/mettre_a_niveau.sh 03
+bash scripts/formation/verifier_jalon.sh 03
 ```
 
 En cas de conflit :
 
 ```bash
-bash scripts/formation/mettre_a_niveau.sh 03-j2-matin-m25 --rattrapage
+bash scripts/formation/mettre_a_niveau.sh 03 --rattrapage
 ```
+
+Les anciens slugs complets, par exemple `03-j2-matin-m25`, restent acceptes par
+compatibilite. Le format a enseigner et a afficher est toutefois le numero court.
 
 ## Regles communes
 
-- Les jalons sont cumulatifs, mais un jalon futur n'est publie qu'au moment prevu.
+- Les jalons sont cumulatifs et deja publics ; ne chargez que le numero annonce
+  par le formateur, sans explorer ni fusionner un jalon futur.
 - Une branche `jalon/...` est une reference en lecture seule ; on travaille sur
   sa branche personnelle.
 - Aucun secret ne doit entrer dans Git. Utiliser `.env`, jamais `.env.example`,
