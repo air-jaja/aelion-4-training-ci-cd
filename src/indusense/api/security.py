@@ -1,3 +1,21 @@
+# [PÉDAGOGIE] ============================================================================
+# [PÉDAGOGIE] FICHIER — src/indusense/api/security.py
+# [PÉDAGOGIE] MODULE  — M26 — sécurité d'API et défense en profondeur
+# [PÉDAGOGIE] RÔLE    — Appliquer des garde-fous indépendants aux frontières HTTP et prouver leurs
+# [PÉDAGOGIE]           codes d'erreur.
+# [PÉDAGOGIE] THÉORIE — authentification, taille maximale et limitation de débit couvrent des
+# [PÉDAGOGIE]           menaces distinctes
+# [PÉDAGOGIE]           • une règle serveur ne doit pas être surchargeable par un paramètre fourni
+# [PÉDAGOGIE]             par le client
+# [PÉDAGOGIE]           • 400, 401, 413 et 429 décrivent des contrats d'échec différents
+# [PÉDAGOGIE] À VOIR  — Les tests doivent observer le statut HTTP et l'absence de contournement,
+# [PÉDAGOGIE]           pas seulement une exception Python.
+# [PÉDAGOGIE] PIÈGE   — Un rate limit en mémoire ne se partage pas entre processus ; documenter
+# [PÉDAGOGIE]           cette limite de conception.
+# [PÉDAGOGIE] GARDE   — Toutes les lignes marquées [PÉDAGOGIE] sont des commentaires : elles
+# [PÉDAGOGIE]           guident la lecture sans changer l'exécution.
+# [PÉDAGOGIE] ============================================================================
+
 # =============================================================================
 #  src/indusense/api/security.py  —  GARDE-FOUS de l'API (protection de base)
 # -----------------------------------------------------------------------------
@@ -32,6 +50,7 @@
 # =============================================================================
 
 # Annotations de type modernes (voir explication dans les autres fichiers).
+# [PÉDAGOGIE] DÉPENDANCE — __future__ : apporte une dépendance explicitement visible au lecteur.
 from __future__ import annotations
 
 # `time` : module standard pour mesurer le temps. On utilisera `time.time()`,
@@ -72,6 +91,8 @@ from fastapi.responses import JSONResponse
 # Calcul : 64 * 1024 = 65 536 octets. On écrit « 64 * 1024 » plutôt que « 65536 »
 # car c'est plus parlant (« 64 Ko ») et auto-documenté. Toute requête déclarant
 # un corps plus grand que cela sera rejetée par le middleware ci-dessous.
+# [PÉDAGOGIE] CONSTANTE / CONTRAT — cette valeur nommée centralise un choix partagé au lieu de le
+# [PÉDAGOGIE] disperser.
 MAX_BODY_BYTES = 64 * 1024
 
 # `_hits` : la mémoire du limiteur de débit. C'est un dictionnaire qui associe
@@ -86,6 +107,8 @@ MAX_BODY_BYTES = 64 * 1024
 #   Il se vide à chaque redémarrage et n'est pas partagé entre plusieurs
 #   instances du serveur. Pour de la production multi-serveurs, on utiliserait
 #   plutôt un stockage commun (ex. Redis). Ici, c'est volontairement simple.
+# [PÉDAGOGIE] CONSTANTE / CONTRAT — cette valeur nommée centralise un choix partagé au lieu de le
+# [PÉDAGOGIE] disperser.
 _hits: dict[str, deque] = defaultdict(deque)
 
 
@@ -95,6 +118,10 @@ _hits: dict[str, deque] = defaultdict(deque)
 # `async def` : fonction ASYNCHRONE. Les middlewares HTTP de FastAPI doivent être
 # asynchrones car le serveur traite de nombreuses requêtes « en parallèle » sans
 # se bloquer. Le mot-clé `await` (plus bas) sert à attendre une opération async.
+# [PÉDAGOGIE] BLOC `limit_body_size` — unité de responsabilité : isoler un comportement nommable,
+# [PÉDAGOGIE] testable et réutilisable.
+# [PÉDAGOGIE] CONTRAT — entrées : request, call_next ; preuve : l'appelant doit pouvoir vérifier
+# [PÉDAGOGIE] la sortie ou l'effet de bord annoncé.
 async def limit_body_size(request: Request, call_next):
     # Signature imposée par FastAPI pour un middleware « http » :
     #   - `request`   : la requête entrante ;
@@ -113,17 +140,27 @@ async def limit_body_size(request: Request, call_next):
     #     protection, `int("abc")` lève une ValueError NON RATTRAPÉE -> l'API
     #     renvoie un 500 (erreur serveur) au lieu de refuser proprement. On
     #     encadre donc la conversion dans un try/except.
+    # [PÉDAGOGIE] DÉCISION — cette condition matérialise une règle testable ; lire séparément le
+    # [PÉDAGOGIE] cas vrai et le cas faux.
     if content_length is not None:
+        # [PÉDAGOGIE] ERREUR — cette frontière distingue le chemin nominal de la stratégie
+        # [PÉDAGOGIE] explicite de récupération.
         try:
             declared = int(content_length)
         except ValueError:
             # En-tête Content-Length non numérique : on ne peut pas lui faire
             # confiance -> on rejette avec 400 (requête malformée), sans planter.
+            # [PÉDAGOGIE] SORTIE — cette valeur constitue le contrat remis à l'appelant ; son type
+            # [PÉDAGOGIE] et son sens doivent rester stables.
             return JSONResponse(status_code=400, content={"detail": "Content-Length invalide"})
+        # [PÉDAGOGIE] DÉCISION — cette condition matérialise une règle testable ; lire séparément
+        # [PÉDAGOGIE] le cas vrai et le cas faux.
         if declared > MAX_BODY_BYTES:
             # On REFUSE immédiatement, sans appeler `call_next` : la requête n'ira
             # jamais jusqu'à la route. Réponse JSON avec le code 413 (« Payload
             # Too Large ») et un message d'explication en français.
+            # [PÉDAGOGIE] SORTIE — cette valeur constitue le contrat remis à l'appelant ; son type
+            # [PÉDAGOGIE] et son sens doivent rester stables.
             return JSONResponse(status_code=413, content={"detail": "Payload trop volumineux"})
 
     # ⚠️ LIMITE CONNUE (contrôle DÉCLARATIF, pas EFFECTIF) : ce garde-fou ne lit
@@ -132,6 +169,8 @@ async def limit_body_size(request: Request, call_next):
     # gros. Un contrôle EFFECTIF exigerait de compter les octets reçus au niveau
     # ASGI (au fil du flux `receive`) et/ou une limite au reverse-proxy en amont.
     # Ici, c'est volontairement une première barrière simple — cf. module 26.
+    # [PÉDAGOGIE] SORTIE — cette valeur constitue le contrat remis à l'appelant ; son type et son
+    # [PÉDAGOGIE] sens doivent rester stables.
     return await call_next(request)
 
 
@@ -144,6 +183,10 @@ async def limit_body_size(request: Request, call_next):
 # si la limite est dépassée, l'exception levée bloque l'accès.
 #   - `-> None` : la fonction ne renvoie rien d'utile. Soit elle laisse passer
 #     (silencieusement), soit elle lève une exception qui interrompt tout.
+# [PÉDAGOGIE] BLOC `rate_limit` — unité de responsabilité : isoler un comportement nommable,
+# [PÉDAGOGIE] testable et réutilisable.
+# [PÉDAGOGIE] CONTRAT — entrées : request, limit, window ; preuve : l'appelant doit pouvoir
+# [PÉDAGOGIE] vérifier la sortie ou l'effet de bord annoncé.
 def rate_limit(request: Request, limit: int = 60, window: float = 60.0) -> None:
     # Paramètres avec valeurs par défaut :
     #   - `limit`  = 60   : nombre maximum de requêtes autorisées par IP...
@@ -168,15 +211,21 @@ def rate_limit(request: Request, limit: int = 60, window: float = 60.0) -> None:
     #     par la gauche avec `popleft()` (très efficace sur une deque).
     #   Après cette boucle, `q` ne contient plus que les requêtes des `window`
     #   dernières secondes : c'est ça, la « fenêtre glissante ».
+    # [PÉDAGOGIE] BOUCLE — la condition de poursuite doit progresser vers l'arrêt et rester
+    # [PÉDAGOGIE] observable.
     while q and q[0] < now - window:
         q.popleft()
 
     # DÉCISION — si, après nettoyage, il reste déjà `limit` requêtes (ou plus)
     # dans la fenêtre, c'est que le quota est atteint : on REFUSE la requête.
+    # [PÉDAGOGIE] DÉCISION — cette condition matérialise une règle testable ; lire séparément le
+    # [PÉDAGOGIE] cas vrai et le cas faux.
     if len(q) >= limit:
         # On lève une `HTTPException` avec le code 429 (« Too Many Requests »).
         # FastAPI l'intercepte et renvoie au client une erreur propre. Le client
         # comprend qu'il doit ralentir et réessayer plus tard.
+        # [PÉDAGOGIE] FAIL FAST — refuser ici empêche un état invalide de contaminer les étapes
+        # [PÉDAGOGIE] suivantes.
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Trop de requêtes"
         )
@@ -191,6 +240,10 @@ def rate_limit(request: Request, limit: int = 60, window: float = 60.0) -> None:
 # -----------------------------------------------------------------------------
 #  DÉPENDANCE à brancher sur les routes (Depends) — politique FIXE
 # -----------------------------------------------------------------------------
+# [PÉDAGOGIE] BLOC `rate_limit_dependency` — unité de responsabilité : isoler un comportement
+# [PÉDAGOGIE] nommable, testable et réutilisable.
+# [PÉDAGOGIE] CONTRAT — entrées : request ; preuve : l'appelant doit pouvoir vérifier la sortie ou
+# [PÉDAGOGIE] l'effet de bord annoncé.
 def rate_limit_dependency(request: Request) -> None:
     """Garde-fou anti-flood à brancher via `Depends(rate_limit_dependency)`.
 

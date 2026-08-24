@@ -1,4 +1,23 @@
 #!/usr/bin/env python
+# [PÉDAGOGIE] ============================================================================
+# [PÉDAGOGIE] FICHIER — scripts/demo_prefect_idempotence.py
+# [PÉDAGOGIE] MODULE  — M29–M30 — orchestration, reprise et idempotence
+# [PÉDAGOGIE] RÔLE    — Séparer le code métier des tâches observables et de leur ordre
+# [PÉDAGOGIE]           d'exécution.
+# [PÉDAGOGIE] THÉORIE — un flow décrit le graphe ; une task porte une unité observable et
+# [PÉDAGOGIE]           relançable
+# [PÉDAGOGIE]           • un retry convient à une erreur transitoire mais ne corrige pas une
+# [PÉDAGOGIE]             logique fausse
+# [PÉDAGOGIE]           • l'idempotence garantit qu'une reprise ne duplique pas les effets déjà
+# [PÉDAGOGIE]             validés
+# [PÉDAGOGIE] À VOIR  — Deux exécutions avec la même clé métier doivent produire un état final
+# [PÉDAGOGIE]           cohérent et traçable.
+# [PÉDAGOGIE] PIÈGE   — Relancer aveuglément une tâche à effets de bord peut créer doublons,
+# [PÉDAGOGIE]           incohérences ou fausses preuves.
+# [PÉDAGOGIE] GARDE   — Toutes les lignes marquées [PÉDAGOGIE] sont des commentaires : elles
+# [PÉDAGOGIE]           guident la lecture sans changer l'exécution.
+# [PÉDAGOGIE] ============================================================================
+
 # =============================================================================
 #  scripts/demo_prefect_idempotence.py
 #  Démo autonome du MODULE 30 : un flow Prefect ingest -> predict -> store,
@@ -24,6 +43,7 @@
 #     uv run python scripts/demo_prefect_idempotence.py --reset
 #     uv run python scripts/demo_prefect_idempotence.py --show
 # =============================================================================
+# [PÉDAGOGIE] DÉPENDANCE — __future__ : apporte une dépendance explicitement visible au lecteur.
 from __future__ import annotations
 
 import argparse
@@ -41,11 +61,21 @@ from indusense.config import settings
 from indusense.features.temporal import add_temporal_features
 from indusense.models.tabular import load_model, predict_proba, select_features
 
+# [PÉDAGOGIE] CONSTANTE / CONTRAT — cette valeur nommée centralise un choix partagé au lieu de le
+# [PÉDAGOGIE] disperser.
 DB = Path("predictions.db")
+# [PÉDAGOGIE] CONSTANTE / CONTRAT — cette valeur nommée centralise un choix partagé au lieu de le
+# [PÉDAGOGIE] disperser.
 MACHINES = ["MACH-01", "MACH-02", "MACH-03", "MACH-04"]  # nos 4 machines de démo
+# [PÉDAGOGIE] CONSTANTE / CONTRAT — cette valeur nommée centralise un choix partagé au lieu de le
+# [PÉDAGOGIE] disperser.
 T0 = dt.datetime(2025, 2, 1, 0, 0, 0)
 
 
+# [PÉDAGOGIE] BLOC `_readings` — frontière d'entrée : convertir une représentation externe en
+# [PÉDAGOGIE] structure interne validée.
+# [PÉDAGOGIE] CONTRAT — entrées : machine, end_ts, n, seed ; preuve : vérifier schéma, types,
+# [PÉDAGOGIE] ordre et erreurs explicites avant tout calcul aval.
 def _readings(machine: str, end_ts: dt.datetime, n: int = 10, seed: int = 0) -> pd.DataFrame:
     """Fabrique n relevés horaires (temp, pression) finissant à `end_ts`, de façon
     DÉTERMINISTE (même graine => mêmes valeurs) : ainsi rejouer donne les mêmes
@@ -53,6 +83,8 @@ def _readings(machine: str, end_ts: dt.datetime, n: int = 10, seed: int = 0) -> 
     rng = np.random.default_rng(seed)
     base_t = 50 + MACHINES.index(machine) * 2
     rows = []
+    # [PÉDAGOGIE] ITÉRATION — appliquer la même règle à chaque élément permet de raisonner sur un
+    # [PÉDAGOGIE] invariant stable.
     for i in range(n):
         ts = end_ts - dt.timedelta(hours=n - 1 - i)
         rows.append(
@@ -62,9 +94,15 @@ def _readings(machine: str, end_ts: dt.datetime, n: int = 10, seed: int = 0) -> 
                 "pressure_bar": 195 + i * 0.4 + rng.normal(0, 0.2),
             }
         )
+    # [PÉDAGOGIE] SORTIE — cette valeur constitue le contrat remis à l'appelant ; son type et son
+    # [PÉDAGOGIE] sens doivent rester stables.
     return pd.DataFrame(rows)
 
 
+# [PÉDAGOGIE] BLOC `ingest` — unité de responsabilité : isoler un comportement nommable, testable
+# [PÉDAGOGIE] et réutilisable.
+# [PÉDAGOGIE] CONTRAT — entrées : moments_per_machine ; preuve : l'appelant doit pouvoir vérifier
+# [PÉDAGOGIE] la sortie ou l'effet de bord annoncé.
 @task
 def ingest(moments_per_machine: int) -> list[tuple[str, dt.datetime]]:
     """ÉTAPE 1 — décide QUOI prédire : la liste des (machine, horodatage)."""
@@ -78,15 +116,23 @@ def ingest(moments_per_machine: int) -> list[tuple[str, dt.datetime]]:
         len(MACHINES),
         moments_per_machine,
     )
+    # [PÉDAGOGIE] SORTIE — cette valeur constitue le contrat remis à l'appelant ; son type et son
+    # [PÉDAGOGIE] sens doivent rester stables.
     return moments
 
 
+# [PÉDAGOGIE] BLOC `predict_batch` — phase d'inférence ou d'évaluation : appliquer un contrat gelé
+# [PÉDAGOGIE] à des observations nouvelles.
+# [PÉDAGOGIE] CONTRAT — entrées : model, moments ; preuve : contrôler ordre des features, seuil,
+# [PÉDAGOGIE] métriques et provenance du modèle.
 @task
 def predict_batch(model, moments: list[tuple[str, dt.datetime]]) -> list[tuple]:
     """ÉTAPE 2 — prédit pour chaque moment (même pipeline que l'API : features
     sans fuite -> dernière ligne -> proba)."""
     log = get_run_logger()
     out = []
+    # [PÉDAGOGIE] ITÉRATION — appliquer la même règle à chaque élément permet de raisonner sur un
+    # [PÉDAGOGIE] invariant stable.
     for machine, ts in moments:
         df = _readings(machine, ts, seed=MACHINES.index(machine) * 1000 + ts.hour)
         df["machine"] = machine
@@ -96,10 +142,16 @@ def predict_batch(model, moments: list[tuple[str, dt.datetime]]) -> list[tuple]:
         decision = "alerte" if proba >= settings.decision_threshold else "ok"
         out.append((machine, ts.isoformat(), round(proba, 4), decision))
     log.info("predict : %d prédictions calculées", len(out))
+    # [PÉDAGOGIE] SORTIE — cette valeur constitue le contrat remis à l'appelant ; son type et son
+    # [PÉDAGOGIE] sens doivent rester stables.
     return out
 
 
 # retries=2 : si la tâche échoue (erreur TRANSITOIRE), Prefect la relance 2 fois.
+# [PÉDAGOGIE] BLOC `store` — unité de responsabilité : isoler un comportement nommable, testable
+# [PÉDAGOGIE] et réutilisable.
+# [PÉDAGOGIE] CONTRAT — entrées : rows, flaky ; preuve : l'appelant doit pouvoir vérifier la
+# [PÉDAGOGIE] sortie ou l'effet de bord annoncé.
 @task(retries=2, retry_delay_seconds=1)
 def store(rows: list[tuple], flaky: bool = False) -> tuple[int, int]:
     """ÉTAPE 3 — persiste en base par UPSERT (clé = machine + prediction_ts).
@@ -108,8 +160,12 @@ def store(rows: list[tuple], flaky: bool = False) -> tuple[int, int]:
     log = get_run_logger()
 
     # --flaky : on fait échouer la PREMIÈRE tentative pour VOIR Prefect réessayer.
+    # [PÉDAGOGIE] DÉCISION — cette condition matérialise une règle testable ; lire séparément le
+    # [PÉDAGOGIE] cas vrai et le cas faux.
     if flaky and not getattr(store, "_already_failed", False):
         store._already_failed = True
+        # [PÉDAGOGIE] FAIL FAST — refuser ici empêche un état invalide de contaminer les étapes
+        # [PÉDAGOGIE] suivantes.
         raise RuntimeError("panne transitoire simulée de la base - Prefect va réessayer")
 
     con = sqlite3.connect(DB)
@@ -142,9 +198,15 @@ def store(rows: list[tuple], flaky: bool = False) -> tuple[int, int]:
         after,
         after - before,
     )
+    # [PÉDAGOGIE] SORTIE — cette valeur constitue le contrat remis à l'appelant ; son type et son
+    # [PÉDAGOGIE] sens doivent rester stables.
     return before, after
 
 
+# [PÉDAGOGIE] BLOC `predict_flow` — phase d'inférence ou d'évaluation : appliquer un contrat gelé
+# [PÉDAGOGIE] à des observations nouvelles.
+# [PÉDAGOGIE] CONTRAT — entrées : moments_per_machine, flaky ; preuve : contrôler ordre des
+# [PÉDAGOGIE] features, seuil, métriques et provenance du modèle.
 @flow(name="indusense-predict-demo")
 def predict_flow(moments_per_machine: int = 3, flaky: bool = False) -> int:
     """Le FLOW : ingest -> predict -> store. Rejoue-le : le total ne bouge pas."""
@@ -153,19 +215,31 @@ def predict_flow(moments_per_machine: int = 3, flaky: bool = False) -> int:
     moments = ingest(moments_per_machine)
     rows = predict_batch(model, moments)
     before, after = store(rows, flaky)
+    # [PÉDAGOGIE] DÉCISION — cette condition matérialise une règle testable ; lire séparément le
+    # [PÉDAGOGIE] cas vrai et le cas faux.
     if after == before:
         verdict = "IDEMPOTENT (0 nouvelle ligne)"
     else:
         verdict = f"{after - before} nouvelle(s) ligne(s)"
     log.info("FLOW terminé : %d lignes en base -> %s", after, verdict)
+    # [PÉDAGOGIE] SORTIE — cette valeur constitue le contrat remis à l'appelant ; son type et son
+    # [PÉDAGOGIE] sens doivent rester stables.
     return after
 
 
+# [PÉDAGOGIE] BLOC `_write_html` — unité de responsabilité : isoler un comportement nommable,
+# [PÉDAGOGIE] testable et réutilisable.
+# [PÉDAGOGIE] CONTRAT — entrées : path ; preuve : l'appelant doit pouvoir vérifier la sortie ou
+# [PÉDAGOGIE] l'effet de bord annoncé.
 def _write_html(path: str = "predictions.html") -> str:
     """Écrit une vue HTML lisible de la table (retour visuel dans le navigateur)."""
     p = Path(path)
+    # [PÉDAGOGIE] DÉCISION — cette condition matérialise une règle testable ; lire séparément le
+    # [PÉDAGOGIE] cas vrai et le cas faux.
     if not DB.exists():
         p.write_text("<p>(base vide : lance le flow une fois)</p>", encoding="utf-8")
+        # [PÉDAGOGIE] SORTIE — cette valeur constitue le contrat remis à l'appelant ; son type et
+        # [PÉDAGOGIE] son sens doivent rester stables.
         return str(p.resolve())
     con = sqlite3.connect(DB)
     rows = con.execute(
@@ -177,6 +251,8 @@ def _write_html(path: str = "predictions.html") -> str:
     n_alerte = sum(1 for r in rows if r[3] == "alerte")
     last = max((r[4] for r in rows), default="-")
     trs = ""
+    # [PÉDAGOGIE] ITÉRATION — appliquer la même règle à chaque élément permet de raisonner sur un
+    # [PÉDAGOGIE] invariant stable.
     for m, ts, proba, dec, wat in rows:
         color = "#ED1548" if dec == "alerte" else "#0B9E6E"
         trs += (
@@ -215,16 +291,28 @@ def _write_html(path: str = "predictions.html") -> str:
         + "</tbody></table></body></html>"
     )
     p.write_text(html, encoding="utf-8")
+    # [PÉDAGOGIE] SORTIE — cette valeur constitue le contrat remis à l'appelant ; son type et son
+    # [PÉDAGOGIE] sens doivent rester stables.
     return str(p.resolve())
 
 
+# [PÉDAGOGIE] BLOC `_show` — unité de responsabilité : isoler un comportement nommable, testable
+# [PÉDAGOGIE] et réutilisable.
+# [PÉDAGOGIE] CONTRAT — entrées : aucun argument explicite ; preuve : l'appelant doit pouvoir
+# [PÉDAGOGIE] vérifier la sortie ou l'effet de bord annoncé.
 def _show() -> None:
+    # [PÉDAGOGIE] DÉCISION — cette condition matérialise une règle testable ; lire séparément le
+    # [PÉDAGOGIE] cas vrai et le cas faux.
     if not DB.exists():
         print("(base vide : lance le script une première fois)")
+        # [PÉDAGOGIE] SORTIE — cette valeur constitue le contrat remis à l'appelant ; son type et
+        # [PÉDAGOGIE] son sens doivent rester stables.
         return
     con = sqlite3.connect(DB)
     total = con.execute("SELECT count(*) FROM predictions").fetchone()[0]
     print(f"\n=== predictions.db : {total} lignes ===")
+    # [PÉDAGOGIE] ITÉRATION — appliquer la même règle à chaque élément permet de raisonner sur un
+    # [PÉDAGOGIE] invariant stable.
     for machine, ts, proba, decision in con.execute(
         "SELECT machine, prediction_ts, proba_panne, decision FROM predictions "
         "ORDER BY machine, prediction_ts"
@@ -233,6 +321,8 @@ def _show() -> None:
     con.close()
 
 
+# [PÉDAGOGIE] DÉCISION — cette condition matérialise une règle testable ; lire séparément le cas
+# [PÉDAGOGIE] vrai et le cas faux.
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description="Démo Prefect + idempotence (module 30).")
     ap.add_argument(
@@ -255,9 +345,13 @@ if __name__ == "__main__":
     )
     args = ap.parse_args()
 
+    # [PÉDAGOGIE] DÉCISION — cette condition matérialise une règle testable ; lire séparément le
+    # [PÉDAGOGIE] cas vrai et le cas faux.
     if args.reset and DB.exists():
         DB.unlink()
         print("[base remise à zéro]")
+    # [PÉDAGOGIE] DÉCISION — cette condition matérialise une règle testable ; lire séparément le
+    # [PÉDAGOGIE] cas vrai et le cas faux.
     if args.show:
         _show()
     else:
@@ -268,5 +362,7 @@ if __name__ == "__main__":
         f"\nVue visuelle -> {view}\n"
         "(ouvre-la dans un navigateur ; elle se rafraîchit toute seule)"
     )
+    # [PÉDAGOGIE] DÉCISION — cette condition matérialise une règle testable ; lire séparément le
+    # [PÉDAGOGIE] cas vrai et le cas faux.
     if args.html:
         webbrowser.open(Path(view).resolve().as_uri())
