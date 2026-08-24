@@ -1,3 +1,21 @@
+# [PÉDAGOGIE] ============================================================================
+# [PÉDAGOGIE] FICHIER — src/indusense/api/__init__.py
+# [PÉDAGOGIE] MODULE  — M25 — contrat d'API, validation et preuve de readiness
+# [PÉDAGOGIE] RÔLE    — Exposer le modèle derrière un contrat HTTP explicite, testable et
+# [PÉDAGOGIE]           observable.
+# [PÉDAGOGIE] THÉORIE — Pydantic valide la forme et les invariants avant l'appel au modèle
+# [PÉDAGOGIE]           • liveness et readiness répondent à deux questions opérationnelles
+# [PÉDAGOGIE]             différentes
+# [PÉDAGOGIE]           • l'injection de dépendances permet d'isoler le chargement du modèle dans
+# [PÉDAGOGIE]             les tests
+# [PÉDAGOGIE] À VOIR  — Swagger/TestClient doivent rendre visibles les entrées, sorties et codes
+# [PÉDAGOGIE]           2xx/4xx/5xx attendus.
+# [PÉDAGOGIE] PIÈGE   — Une réponse 200 ne suffit pas si le schéma, la version du modèle ou la
+# [PÉDAGOGIE]           normalisation sont faux.
+# [PÉDAGOGIE] GARDE   — Toutes les lignes marquées [PÉDAGOGIE] sont des commentaires : elles
+# [PÉDAGOGIE]           guident la lecture sans changer l'exécution.
+# [PÉDAGOGIE] ============================================================================
+
 # =============================================================================
 #  src/indusense/api/__init__.py  —  marqueur de SOUS-PACKAGE « api »
 # -----------------------------------------------------------------------------
