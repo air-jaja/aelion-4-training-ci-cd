@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [ValidatePattern('^\d{2}-[a-z0-9-]+$')]
+    [ValidatePattern('^(0[1-9]|1[0-2])(?:-[a-z0-9-]+)?$')]
     [string]$Jalon
 )
 
@@ -12,8 +12,14 @@ if ($LASTEXITCODE -ne 0 -or -not $root) {
 }
 Set-Location -LiteralPath $root
 
+$jalonNumber = $Jalon.Substring(0, 2)
 $marker = Get-Content -LiteralPath 'FORMATION/JALON_ACTUEL.md' -Raw
-if ($marker -notmatch [regex]::Escape($Jalon)) {
+$markerPattern = if ($Jalon.Length -eq 2) {
+    "(?m)^# Jalon actuel : $([regex]::Escape($jalonNumber))(?:-|$)"
+} else {
+    "(?m)^# Jalon actuel : $([regex]::Escape($Jalon))\r?$"
+}
+if ($marker -notmatch $markerPattern) {
     throw "Le marqueur local ne correspond pas au jalon demande : $Jalon"
 }
 
@@ -24,4 +30,4 @@ if ($LASTEXITCODE -ne 0) { throw 'pytest a echoue.' }
 & uv run ruff check .
 if ($LASTEXITCODE -ne 0) { throw 'ruff a echoue.' }
 
-Write-Host "Jalon verifie : $Jalon"
+Write-Host "Jalon verifie : jalon/$jalonNumber"

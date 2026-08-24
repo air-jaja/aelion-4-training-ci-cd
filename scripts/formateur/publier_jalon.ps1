@@ -1,7 +1,7 @@
 [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
 param(
     [Parameter(Mandatory = $true)]
-    [ValidatePattern('^\d{2}-[a-z0-9-]+$')]
+    [ValidatePattern('^(0[1-9]|1[0-2])(?:-[a-z0-9-]+)?$')]
     [string]$Jalon
 )
 
@@ -14,8 +14,18 @@ if (@(& git status --porcelain).Count -gt 0) {
     throw 'Le depot de preparation doit etre propre avant toute publication.'
 }
 
-$source = "preparation/$Jalon"
-$target = "jalon/$Jalon"
+$jalonNumber = $Jalon.Substring(0, 2)
+$jalonMarker = if ($Jalon.Length -gt 2) {
+    $Jalon
+} else {
+    $indexRow = Import-Csv -LiteralPath 'FORMATION/JALON_INDEX.tsv' -Delimiter "`t" |
+        Where-Object { $_.ordre -eq $jalonNumber }
+    if (-not $indexRow) { throw "Jalon absent de FORMATION/JALON_INDEX.tsv : $jalonNumber" }
+    $indexRow.jalon_marqueur
+}
+
+$source = "preparation/$jalonMarker"
+$target = "jalon/$jalonNumber"
 & git show-ref --verify --quiet "refs/heads/$source"
 if ($LASTEXITCODE -ne 0) { throw "Branche locale absente : $source" }
 
