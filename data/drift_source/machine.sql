@@ -1,5 +1,25 @@
+-- [PÉDAGOGIE] ============================================================================
+-- [PÉDAGOGIE] FICHIER — data/drift_source/machine.sql
+-- [PÉDAGOGIE] MODULE  — M31–M32 — dérive, performance retardée et décision d'alerte
+-- [PÉDAGOGIE] RÔLE    — Comparer une référence gelée à une fenêtre courante puis transformer les
+-- [PÉDAGOGIE]           mesures en décision traçable.
+-- [PÉDAGOGIE] THÉORIE — le PSI mesure un déplacement de distribution ; KS teste un écart
+-- [PÉDAGOGIE]           statistique
+-- [PÉDAGOGIE]           • une dérive d'entrée ne prouve pas à elle seule une dégradation de
+-- [PÉDAGOGIE]             performance métier
+-- [PÉDAGOGIE]           • seuil, fenêtre, segmentation et cooldown font partie du contrat de
+-- [PÉDAGOGIE]             détection
+-- [PÉDAGOGIE] À VOIR  — Le rapport doit conserver valeurs, seuils, décision, fenêtre, référence
+-- [PÉDAGOGIE]           et horodatage UTC.
+-- [PÉDAGOGIE] PIÈGE   — Changer les bins ou la référence entre deux fenêtres rend la comparaison
+-- [PÉDAGOGIE]           difficile à interpréter.
+-- [PÉDAGOGIE] GARDE   — Toutes les lignes marquées [PÉDAGOGIE] sont des commentaires : elles
+-- [PÉDAGOGIE]           guident la lecture sans changer l'exécution.
+-- [PÉDAGOGIE] ============================================================================
+
 -- InduSense 4.0 - référentiel machines (PostgreSQL)
 BEGIN;
+-- [PÉDAGOGIE] SCHÉMA — déclare une structure et les invariants portés par la base.
 CREATE TABLE IF NOT EXISTS machine (
     machine_code            VARCHAR(16) PRIMARY KEY,
     commissioning_date      DATE NOT NULL,
@@ -14,8 +34,11 @@ CREATE TABLE IF NOT EXISTS machine (
 );
 
 -- Petit index utile pour les jointures / filtrages
+-- [PÉDAGOGIE] SCHÉMA — déclare une structure et les invariants portés par la base.
 CREATE INDEX IF NOT EXISTS idx_machine_line ON machine(production_line);
+-- [PÉDAGOGIE] SCHÉMA — déclare une structure et les invariants portés par la base.
 CREATE INDEX IF NOT EXISTS idx_machine_location ON machine(location);
+-- [PÉDAGOGIE] CHARGEMENT — ajoute le jeu de données de référence dans un ordre reproductible.
 INSERT INTO machine (machine_code, commissioning_date, max_daily_capacity, model, production_line, location, criticality)
 VALUES
 ('MACH-01', '2021-05-12', 770, 'InduPress-X2', 'Ligne-A', 'Atelier-2', 'MEDIUM'),

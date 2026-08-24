@@ -1,3 +1,22 @@
+# [PÉDAGOGIE] ============================================================================
+# [PÉDAGOGIE] FICHIER — flows/pipeline.py
+# [PÉDAGOGIE] MODULE  — M29–M30 — orchestration, reprise et idempotence
+# [PÉDAGOGIE] RÔLE    — Séparer le code métier des tâches observables et de leur ordre
+# [PÉDAGOGIE]           d'exécution.
+# [PÉDAGOGIE] THÉORIE — un flow décrit le graphe ; une task porte une unité observable et
+# [PÉDAGOGIE]           relançable
+# [PÉDAGOGIE]           • un retry convient à une erreur transitoire mais ne corrige pas une
+# [PÉDAGOGIE]             logique fausse
+# [PÉDAGOGIE]           • l'idempotence garantit qu'une reprise ne duplique pas les effets déjà
+# [PÉDAGOGIE]             validés
+# [PÉDAGOGIE] À VOIR  — Deux exécutions avec la même clé métier doivent produire un état final
+# [PÉDAGOGIE]           cohérent et traçable.
+# [PÉDAGOGIE] PIÈGE   — Relancer aveuglément une tâche à effets de bord peut créer doublons,
+# [PÉDAGOGIE]           incohérences ou fausses preuves.
+# [PÉDAGOGIE] GARDE   — Toutes les lignes marquées [PÉDAGOGIE] sont des commentaires : elles
+# [PÉDAGOGIE]           guident la lecture sans changer l'exécution.
+# [PÉDAGOGIE] ============================================================================
+
 """Orchestration Prefect du pipeline InduSense (Sprint 3 — modules B9/B10 industrialisation).
 
 POURQUOI UN ORCHESTRATEUR ?
@@ -22,6 +41,7 @@ COMMANDES (depuis indusense-skeleton/, après `uv sync --extra dev`)
 Pas-à-pas complet (création compte, quoi regarder dans l'UI...) : flows/README.md
 """
 
+# [PÉDAGOGIE] DÉPENDANCE — __future__ : apporte une dépendance explicitement visible au lecteur.
 from __future__ import annotations
 
 import json
@@ -31,7 +51,11 @@ from pathlib import Path
 
 # Racine du projet (indusense-skeleton/), calculée depuis ce fichier :
 # le flow marche quel que soit le dossier depuis lequel on le lance.
+# [PÉDAGOGIE] CONSTANTE / CONTRAT — cette valeur nommée centralise un choix partagé au lieu de le
+# [PÉDAGOGIE] disperser.
 ROOT = Path(__file__).resolve().parents[1]
+# [PÉDAGOGIE] DÉCISION — cette condition matérialise une règle testable ; lire séparément le cas
+# [PÉDAGOGIE] vrai et le cas faux.
 if str(ROOT / "src") not in sys.path:  # filet de sécurité si `uv pip install -e .` n'a pas été fait
     sys.path.insert(0, str(ROOT / "src"))
 
@@ -62,6 +86,10 @@ from indusense.models.tabular import (  # noqa: E402
 # ---------------------------------------------------------------------------
 
 
+# [PÉDAGOGIE] BLOC `charger_sources` — unité de responsabilité : isoler un comportement nommable,
+# [PÉDAGOGIE] testable et réutilisable.
+# [PÉDAGOGIE] CONTRAT — entrées : data_dir ; preuve : l'appelant doit pouvoir vérifier la sortie
+# [PÉDAGOGIE] ou l'effet de bord annoncé.
 @task(retries=2, retry_delay_seconds=5)
 def charger_sources(data_dir: Path) -> pd.DataFrame:
     """Charge et harmonise les 3 sources réelles (CSV ';', TSV, incidents).
@@ -76,18 +104,30 @@ def charger_sources(data_dir: Path) -> pd.DataFrame:
     inc = load_incidents(data_dir / "releves_incidents.csv")
     ds = build_dataset(temp, pres, inc, window_hours=settings.incident_window_hours)
     logger.info(f"Dataset assemblé : {len(ds)} lignes, {ds['machine'].nunique()} machines")
+    # [PÉDAGOGIE] SORTIE — cette valeur constitue le contrat remis à l'appelant ; son type et son
+    # [PÉDAGOGIE] sens doivent rester stables.
     return ds
 
 
+# [PÉDAGOGIE] BLOC `construire_features` — unité de responsabilité : isoler un comportement
+# [PÉDAGOGIE] nommable, testable et réutilisable.
+# [PÉDAGOGIE] CONTRAT — entrées : ds ; preuve : l'appelant doit pouvoir vérifier la sortie ou
+# [PÉDAGOGIE] l'effet de bord annoncé.
 @task
 def construire_features(ds: pd.DataFrame) -> pd.DataFrame:
     """Ajoute lags + moyennes glissantes par machine (sans fuite temporelle)."""
     logger = get_run_logger()
     ds = add_temporal_features(ds).dropna()
     logger.info(f"Features temporelles : {ds.shape[1]} colonnes, {len(ds)} lignes exploitables")
+    # [PÉDAGOGIE] SORTIE — cette valeur constitue le contrat remis à l'appelant ; son type et son
+    # [PÉDAGOGIE] sens doivent rester stables.
     return ds
 
 
+# [PÉDAGOGIE] BLOC `entrainer_modele` — phase d'apprentissage : relier données, paramètres et
+# [PÉDAGOGIE] modèle reproductible.
+# [PÉDAGOGIE] CONTRAT — entrées : ds, out, data_dir ; preuve : conserver graine, split, métriques
+# [PÉDAGOGIE] et artefact afin de pouvoir refaire l'expérience.
 @task
 def entrainer_modele(ds: pd.DataFrame, out: Path, data_dir: Path) -> dict:
     """Entraîne le RandomForest et persiste modèle + métadonnées (traçabilité)."""
@@ -110,18 +150,30 @@ def entrainer_modele(ds: pd.DataFrame, out: Path, data_dir: Path) -> dict:
     }
     (out.parent / "model_metadata.json").write_text(json.dumps(meta, indent=2))
     logger.info(f"Modèle entraîné ({len(ds)} lignes, panne={y.mean():.2%}) → {out}")
+    # [PÉDAGOGIE] SORTIE — cette valeur constitue le contrat remis à l'appelant ; son type et son
+    # [PÉDAGOGIE] sens doivent rester stables.
     return meta
 
 
+# [PÉDAGOGIE] BLOC `scorer_machines` — phase d'inférence ou d'évaluation : appliquer un contrat
+# [PÉDAGOGIE] gelé à des observations nouvelles.
+# [PÉDAGOGIE] CONTRAT — entrées : model_path, ds ; preuve : contrôler ordre des features, seuil,
+# [PÉDAGOGIE] métriques et provenance du modèle.
 @task
 def scorer_machines(model_path: Path, ds: pd.DataFrame) -> dict[str, float]:
     """Score la dernière observation de chaque machine : P(panne) ∈ [0, 1]."""
     model = load_model(model_path)
     last = ds.groupby("machine").tail(1)  # 1 ligne par machine = son état le plus récent
     proba = predict_proba(model, select_features(last, settings.target_col))
+    # [PÉDAGOGIE] SORTIE — cette valeur constitue le contrat remis à l'appelant ; son type et son
+    # [PÉDAGOGIE] sens doivent rester stables.
     return {m: round(float(p), 3) for m, p in zip(last["machine"], proba, strict=False)}
 
 
+# [PÉDAGOGIE] BLOC `publier_rapport` — unité de responsabilité : isoler un comportement nommable,
+# [PÉDAGOGIE] testable et réutilisable.
+# [PÉDAGOGIE] CONTRAT — entrées : meta, scores ; preuve : l'appelant doit pouvoir vérifier la
+# [PÉDAGOGIE] sortie ou l'effet de bord annoncé.
 @task
 def publier_rapport(meta: dict, scores: dict[str, float]) -> None:
     """Publie un rapport markdown : UI Cloud → onglet Artifacts du run.
@@ -152,6 +204,10 @@ def publier_rapport(meta: dict, scores: dict[str, float]) -> None:
 # ---------------------------------------------------------------------------
 
 
+# [PÉDAGOGIE] BLOC `pipeline_indusense` — orchestration : rendre l'ordre, les dépendances et les
+# [PÉDAGOGIE] points d'échec visibles.
+# [PÉDAGOGIE] CONTRAT — entrées : data_dir ; preuve : chaque étape doit annoncer sa preuve avant
+# [PÉDAGOGIE] que la suivante ne commence.
 @flow(name="indusense-pipeline", log_prints=True)  # log_prints : les print() → logs du run
 def pipeline_indusense(data_dir: str | None = None) -> dict[str, float]:
     """Pipeline complet : sources → features → entraînement → scoring → rapport.
@@ -169,10 +225,16 @@ def pipeline_indusense(data_dir: str | None = None) -> dict[str, float]:
 
     a_risque = [m for m, p in scores.items() if p >= settings.decision_threshold]
     print(f"{len(scores)} machines scorées, {len(a_risque)} au-dessus du seuil : {a_risque}")
+    # [PÉDAGOGIE] SORTIE — cette valeur constitue le contrat remis à l'appelant ; son type et son
+    # [PÉDAGOGIE] sens doivent rester stables.
     return scores
 
 
+# [PÉDAGOGIE] DÉCISION — cette condition matérialise une règle testable ; lire séparément le cas
+# [PÉDAGOGIE] vrai et le cas faux.
 if __name__ == "__main__":
+    # [PÉDAGOGIE] DÉCISION — cette condition matérialise une règle testable ; lire séparément le
+    # [PÉDAGOGIE] cas vrai et le cas faux.
     if "--serve" in sys.argv:
         # MODE DÉPLOIEMENT : `serve()` enregistre un "deployment" planifié dans
         # Prefect Cloud et transforme CE process en mini-worker local qui exécute

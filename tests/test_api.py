@@ -1,3 +1,21 @@
+# [PÉDAGOGIE] ============================================================================
+# [PÉDAGOGIE] FICHIER — tests/test_api.py
+# [PÉDAGOGIE] MODULE  — M25 — contrat d'API, validation et preuve de readiness
+# [PÉDAGOGIE] RÔLE    — Exposer le modèle derrière un contrat HTTP explicite, testable et
+# [PÉDAGOGIE]           observable.
+# [PÉDAGOGIE] THÉORIE — Pydantic valide la forme et les invariants avant l'appel au modèle
+# [PÉDAGOGIE]           • liveness et readiness répondent à deux questions opérationnelles
+# [PÉDAGOGIE]             différentes
+# [PÉDAGOGIE]           • l'injection de dépendances permet d'isoler le chargement du modèle dans
+# [PÉDAGOGIE]             les tests
+# [PÉDAGOGIE] À VOIR  — Swagger/TestClient doivent rendre visibles les entrées, sorties et codes
+# [PÉDAGOGIE]           2xx/4xx/5xx attendus.
+# [PÉDAGOGIE] PIÈGE   — Une réponse 200 ne suffit pas si le schéma, la version du modèle ou la
+# [PÉDAGOGIE]           normalisation sont faux.
+# [PÉDAGOGIE] GARDE   — Toutes les lignes marquées [PÉDAGOGIE] sont des commentaires : elles
+# [PÉDAGOGIE]           guident la lecture sans changer l'exécution.
+# [PÉDAGOGIE] ============================================================================
+
 # =============================================================================
 # FICHIER : tests/test_api.py
 # RÔLE    : Tests de l'API HTTP du module 25 (l'endpoint de prédiction tabulaire).
@@ -28,6 +46,7 @@
 
 # pandas : bibliothèque de manipulation de tableaux de données (DataFrame).
 # On l'utilise pour fabriquer un petit jeu de données d'entraînement de test.
+# [PÉDAGOGIE] DÉPENDANCE — pandas : porte les tableaux typés et les transformations de données.
 import pandas as pd
 
 # TestClient : le client de test HTTP fourni par FastAPI.
@@ -55,9 +74,15 @@ from indusense.models.tabular import select_features, train_model
 
 # TestClient(app) : on crée UNE fois le client de test, partagé par tous les tests.
 # À partir de "client", on pourra faire client.get(...) et client.post(...).
+# [PÉDAGOGIE] CONSTANTE / CONTRAT — cette valeur nommée centralise un choix partagé au lieu de le
+# [PÉDAGOGIE] disperser.
 client = TestClient(app)
 
 
+# [PÉDAGOGIE] BLOC `_bundle` — unité de responsabilité : isoler un comportement nommable, testable
+# [PÉDAGOGIE] et réutilisable.
+# [PÉDAGOGIE] CONTRAT — entrées : aucun argument explicite ; preuve : l'appelant doit pouvoir
+# [PÉDAGOGIE] vérifier la sortie ou l'effet de bord annoncé.
 def _bundle():
     """Fabrique un FAUX modèle (un "ModelBundle" jouet) pour les tests.
 
@@ -101,11 +126,17 @@ def _bundle():
     #   - version     : étiquette de version, ici "test".
     #   - threshold   : seuil de décision (proba >= 0.5 -> "alerte").
     #   - target_col  : nom de la colonne cible ("panne").
+    # [PÉDAGOGIE] SORTIE — cette valeur constitue le contrat remis à l'appelant ; son type et son
+    # [PÉDAGOGIE] sens doivent rester stables.
     return ModelBundle(
         model=train_model(X, y, n_estimators=10), version="test", threshold=0.5, target_col="panne"
     )
 
 
+# [PÉDAGOGIE] BLOC `test_health_ok` — ce test transforme un comportement attendu en contrat de
+# [PÉDAGOGIE] non-régression.
+# [PÉDAGOGIE] CONTRAT — entrées : aucun argument explicite ; preuve : la dernière assertion est
+# [PÉDAGOGIE] l'oracle : son échec doit pointer la garantie cassée.
 def test_health_ok():
     """Vérifie l'endpoint de "santé" du service.
 
@@ -117,9 +148,14 @@ def test_health_ok():
     # client.get("/health") simule un appel HTTP GET sur /health.
     # .json() lit le corps de la réponse et le transforme en dictionnaire Python.
     # On vérifie que ce dictionnaire vaut EXACTEMENT {"status": "ok"}.
+    # [PÉDAGOGIE] ORACLE — l'assertion compare le résultat observé au contrat attendu par ce test.
     assert client.get("/health").json() == {"status": "ok"}
 
 
+# [PÉDAGOGIE] BLOC `test_missing_api_key_returns_401` — ce test transforme un comportement attendu
+# [PÉDAGOGIE] en contrat de non-régression.
+# [PÉDAGOGIE] CONTRAT — entrées : aucun argument explicite ; preuve : la dernière assertion est
+# [PÉDAGOGIE] l'oracle : son échec doit pointer la garantie cassée.
 def test_missing_api_key_returns_401():
     """Vérifie que SANS clé API, l'accès à l'endpoint protégé est REFUSÉ.
 
@@ -133,9 +169,14 @@ def test_missing_api_key_returns_401():
     r = client.post("/predict-tabular", json={"machine_id": "MACH-01", "readings": []})
 
     # Comportement attendu : code HTTP 401 (accès non autorisé, clé manquante).
+    # [PÉDAGOGIE] ORACLE — l'assertion compare le résultat observé au contrat attendu par ce test.
     assert r.status_code == 401
 
 
+# [PÉDAGOGIE] BLOC `test_insufficient_readings_returns_422` — ce test transforme un comportement
+# [PÉDAGOGIE] attendu en contrat de non-régression.
+# [PÉDAGOGIE] CONTRAT — entrées : aucun argument explicite ; preuve : la dernière assertion est
+# [PÉDAGOGIE] l'oracle : son échec doit pointer la garantie cassée.
 def test_insufficient_readings_returns_422():
     """Vérifie le rejet d'une requête contenant TROP PEU de relevés.
 
@@ -153,9 +194,14 @@ def test_insufficient_readings_returns_422():
     )
 
     # Comportement attendu : 422, car le contenu est invalide (pas assez de relevés).
+    # [PÉDAGOGIE] ORACLE — l'assertion compare le résultat observé au contrat attendu par ce test.
     assert r.status_code == 422
 
 
+# [PÉDAGOGIE] BLOC `test_predict_ok_with_bundle` — ce test transforme un comportement attendu en
+# [PÉDAGOGIE] contrat de non-régression.
+# [PÉDAGOGIE] CONTRAT — entrées : aucun argument explicite ; preuve : la dernière assertion est
+# [PÉDAGOGIE] l'oracle : son échec doit pointer la garantie cassée.
 def test_predict_ok_with_bundle():
     """Vérifie le SCÉNARIO NOMINAL : une requête correcte renvoie une décision.
 
@@ -192,6 +238,7 @@ def test_predict_ok_with_bundle():
     app.dependency_overrides.clear()
 
     # Comportement attendu : tout est valide -> code 200 (succès).
+    # [PÉDAGOGIE] ORACLE — l'assertion compare le résultat observé au contrat attendu par ce test.
     assert r.status_code == 200
 
     # b : le corps de la réponse, converti en dictionnaire Python.
@@ -200,9 +247,14 @@ def test_predict_ok_with_bundle():
     # Deux vérifications combinées (and) sur la réponse :
     #   1) proba_panne est bien une probabilité, donc entre 0.0 et 1.0 inclus.
     #   2) decision est l'une des deux valeurs attendues : "alerte" ou "ok".
+    # [PÉDAGOGIE] ORACLE — l'assertion compare le résultat observé au contrat attendu par ce test.
     assert 0.0 <= b["proba_panne"] <= 1.0 and b["decision"] in {"alerte", "ok"}
 
 
+# [PÉDAGOGIE] BLOC `_readings` — frontière d'entrée : convertir une représentation externe en
+# [PÉDAGOGIE] structure interne validée.
+# [PÉDAGOGIE] CONTRAT — entrées : aucun argument explicite ; preuve : vérifier schéma, types,
+# [PÉDAGOGIE] ordre et erreurs explicites avant tout calcul aval.
 def _readings():
     """Fabrique 8 relevés valides, réutilisables par plusieurs tests.
 
@@ -210,6 +262,8 @@ def _readings():
     recopier le même code (principe DRY : "Don't Repeat Yourself"). Le contenu
     est identique aux relevés du test nominal ci-dessus.
     """
+    # [PÉDAGOGIE] SORTIE — cette valeur constitue le contrat remis à l'appelant ; son type et son
+    # [PÉDAGOGIE] sens doivent rester stables.
     return [
         {
             "timestamp": f"2025-02-01T{h:02d}:00:00",
@@ -220,6 +274,10 @@ def _readings():
     ]
 
 
+# [PÉDAGOGIE] BLOC `test_predict_normalizes_noncanonical_machine_id` — ce test transforme un
+# [PÉDAGOGIE] comportement attendu en contrat de non-régression.
+# [PÉDAGOGIE] CONTRAT — entrées : aucun argument explicite ; preuve : la dernière assertion est
+# [PÉDAGOGIE] l'oracle : son échec doit pointer la garantie cassée.
 def test_predict_normalizes_noncanonical_machine_id():
     """Bord API : un client envoyant ``M-7`` est canonicalisé en interne (MACH-07) -> 200.
 
@@ -249,13 +307,19 @@ def test_predict_normalizes_noncanonical_machine_id():
     app.dependency_overrides.clear()
 
     # Comportement attendu n°1 : la normalisation interne réussit -> 200.
+    # [PÉDAGOGIE] ORACLE — l'assertion compare le résultat observé au contrat attendu par ce test.
     assert r.status_code == 200
 
     # Comportement attendu n°2 : la sortie conserve la valeur BRUTE "M-7"
     # (et NE la remplace PAS par la forme canonique "MACH-07").
+    # [PÉDAGOGIE] ORACLE — l'assertion compare le résultat observé au contrat attendu par ce test.
     assert r.json()["machine_id"] == "M-7"  # brut conservé, pas réécrit en MACH-07
 
 
+# [PÉDAGOGIE] BLOC `test_predict_invalid_machine_id_returns_422` — ce test transforme un
+# [PÉDAGOGIE] comportement attendu en contrat de non-régression.
+# [PÉDAGOGIE] CONTRAT — entrées : aucun argument explicite ; preuve : la dernière assertion est
+# [PÉDAGOGIE] l'oracle : son échec doit pointer la garantie cassée.
 def test_predict_invalid_machine_id_returns_422():
     """Bord API : un ``machine_id`` sans numéro (``NOPE``) lève ValueError -> 422 (jamais 500)."""
     # ----- Explications détaillées pour débutant·e :
@@ -281,4 +345,5 @@ def test_predict_invalid_machine_id_returns_422():
     app.dependency_overrides.clear()
 
     # Comportement attendu : 422 (machine_id invalide), et JAMAIS 500.
+    # [PÉDAGOGIE] ORACLE — l'assertion compare le résultat observé au contrat attendu par ce test.
     assert r.status_code == 422
