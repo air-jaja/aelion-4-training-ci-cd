@@ -1,3 +1,21 @@
+# [PÉDAGOGIE] ============================================================================
+# [PÉDAGOGIE] FICHIER — src/indusense/api/schemas.py
+# [PÉDAGOGIE] MODULE  — M25 — contrat d'API, validation et preuve de readiness
+# [PÉDAGOGIE] RÔLE    — Exposer le modèle derrière un contrat HTTP explicite, testable et
+# [PÉDAGOGIE]           observable.
+# [PÉDAGOGIE] THÉORIE — Pydantic valide la forme et les invariants avant l'appel au modèle
+# [PÉDAGOGIE]           • liveness et readiness répondent à deux questions opérationnelles
+# [PÉDAGOGIE]             différentes
+# [PÉDAGOGIE]           • l'injection de dépendances permet d'isoler le chargement du modèle dans
+# [PÉDAGOGIE]             les tests
+# [PÉDAGOGIE] À VOIR  — Swagger/TestClient doivent rendre visibles les entrées, sorties et codes
+# [PÉDAGOGIE]           2xx/4xx/5xx attendus.
+# [PÉDAGOGIE] PIÈGE   — Une réponse 200 ne suffit pas si le schéma, la version du modèle ou la
+# [PÉDAGOGIE]           normalisation sont faux.
+# [PÉDAGOGIE] GARDE   — Toutes les lignes marquées [PÉDAGOGIE] sont des commentaires : elles
+# [PÉDAGOGIE]           guident la lecture sans changer l'exécution.
+# [PÉDAGOGIE] ============================================================================
+
 # =============================================================================
 #  src/indusense/api/schemas.py  —  le CONTRAT des données de l'API (Pydantic)
 # -----------------------------------------------------------------------------
@@ -29,6 +47,7 @@
 # tête de fichier. Elle permet d'écrire des annotations de type modernes
 # (ex. `list[SensorReading]` au lieu de `List[SensorReading]`) même sur des
 # versions de Python plus anciennes, en traitant les annotations comme du texte.
+# [PÉDAGOGIE] DÉPENDANCE — __future__ : apporte une dépendance explicitement visible au lecteur.
 from __future__ import annotations
 
 # `datetime` : le type Python standard pour représenter une DATE + HEURE.
@@ -47,6 +66,10 @@ from pydantic import BaseModel, Field
 # -----------------------------------------------------------------------------
 #  SCHÉMA 1 : un relevé de capteur, à un instant donné.
 # -----------------------------------------------------------------------------
+# [PÉDAGOGIE] TYPE `SensorReading` — regroupe un état cohérent et le contrat des opérations
+# [PÉDAGOGIE] associées.
+# [PÉDAGOGIE] THÉORIE — nommer ce type rend les invariants visibles et facilite les tests à la
+# [PÉDAGOGIE] frontière.
 class SensorReading(BaseModel):
     """Un point de mesure : une date + une température + une pression."""
 
@@ -78,6 +101,10 @@ class SensorReading(BaseModel):
 # -----------------------------------------------------------------------------
 #  SCHÉMA 2 : la REQUÊTE envoyée à /predict-tabular (ce que le client poste).
 # -----------------------------------------------------------------------------
+# [PÉDAGOGIE] TYPE `TabularPredictionRequest` — regroupe un état cohérent et le contrat des
+# [PÉDAGOGIE] opérations associées.
+# [PÉDAGOGIE] THÉORIE — nommer ce type rend les invariants visibles et facilite les tests à la
+# [PÉDAGOGIE] frontière.
 class TabularPredictionRequest(BaseModel):
     """Demande de prédiction : l'identifiant machine + son historique de relevés."""
 
@@ -108,6 +135,10 @@ class TabularPredictionRequest(BaseModel):
 # -----------------------------------------------------------------------------
 #  SCHÉMA 3 : la RÉPONSE renvoyée par /predict-tabular (ce que l'API retourne).
 # -----------------------------------------------------------------------------
+# [PÉDAGOGIE] TYPE `PredictionResponse` — regroupe un état cohérent et le contrat des opérations
+# [PÉDAGOGIE] associées.
+# [PÉDAGOGIE] THÉORIE — nommer ce type rend les invariants visibles et facilite les tests à la
+# [PÉDAGOGIE] frontière.
 class PredictionResponse(BaseModel):
     """Résultat de la prédiction renvoyé au client."""
 
