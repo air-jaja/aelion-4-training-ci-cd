@@ -16,4 +16,4 @@ build/
 
 # MLFlow
 mlruns/
-./mlflow.db
+*.db
