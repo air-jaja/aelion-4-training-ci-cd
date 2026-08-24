@@ -1,3 +1,18 @@
+# [PÉDAGOGIE] ============================================================================
+# [PÉDAGOGIE] FICHIER — src/indusense/config.py
+# [PÉDAGOGIE] MODULE  — M23–M26 — configuration typée et séparation code/environnement
+# [PÉDAGOGIE] RÔLE    — Rassembler les paramètres variables, leurs valeurs par défaut et leur
+# [PÉDAGOGIE]           validation.
+# [PÉDAGOGIE] THÉORIE — une configuration typée échoue tôt plutôt que loin de la cause
+# [PÉDAGOGIE]           • les chemins sont résolus depuis une racine stable
+# [PÉDAGOGIE]           • secrets et réglages d'environnement ne doivent pas être codés en dur
+# [PÉDAGOGIE] À VOIR  — Afficher les valeurs non sensibles effectivement chargées et tester les
+# [PÉDAGOGIE]           valeurs invalides.
+# [PÉDAGOGIE] PIÈGE   — Ne jamais journaliser une clé API, un mot de passe ou un jeton complet.
+# [PÉDAGOGIE] GARDE   — Toutes les lignes marquées [PÉDAGOGIE] sont des commentaires : elles
+# [PÉDAGOGIE]           guident la lecture sans changer l'exécution.
+# [PÉDAGOGIE] ============================================================================
+
 # =============================================================================
 #  src/indusense/config.py  —  CONFIGURATION CENTRALE du projet
 # -----------------------------------------------------------------------------
@@ -10,6 +25,8 @@
 #  fichier `.env`. Exemple : poser `INDUSENSE_RANDOM_SEED=7` change la graine.
 #  C'est la bonne pratique « 12-factor app » : la config vit hors du code.
 # =============================================================================
+# [PÉDAGOGIE] DÉPENDANCE — pathlib : manipule les chemins sans dépendre du séparateur
+# [PÉDAGOGIE] Windows/Linux/macOS.
 from pathlib import Path  # objet « chemin de fichier » portable Windows/macOS/Linux
 
 # BaseSettings : une classe spéciale qui lit automatiquement les variables
@@ -17,6 +34,9 @@ from pathlib import Path  # objet « chemin de fichier » portable Windows/macOS
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+# [PÉDAGOGIE] TYPE `Settings` — regroupe un état cohérent et le contrat des opérations associées.
+# [PÉDAGOGIE] THÉORIE — nommer ce type rend les invariants visibles et facilite les tests à la
+# [PÉDAGOGIE] frontière.
 class Settings(BaseSettings):
     """Tous les réglages du projet, typés et surchargeables par l'environnement."""
 
@@ -45,4 +65,6 @@ class Settings(BaseSettings):
 
 # On crée UNE instance partagée, importable partout via `from indusense.config import settings`.
 # (Au moment de cette ligne, pydantic lit l'environnement / le .env et remplit les valeurs.)
+# [PÉDAGOGIE] CONSTANTE / CONTRAT — cette valeur nommée centralise un choix partagé au lieu de le
+# [PÉDAGOGIE] disperser.
 settings = Settings()
