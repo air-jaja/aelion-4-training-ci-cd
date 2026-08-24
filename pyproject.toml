@@ -1,48 +1,124 @@
+# [PÉDAGOGIE] ============================================================================
+# [PÉDAGOGIE] FICHIER — pyproject.toml
+# [PÉDAGOGIE] MODULE  — M23–M24 — paquet Python, environnement uv et outillage
+# [PÉDAGOGIE] RÔLE    — Centraliser l'identité du paquet, ses dépendances et les règles communes
+# [PÉDAGOGIE]           aux outils.
+# [PÉDAGOGIE] THÉORIE — pyproject.toml est une source déclarative ; uv matérialise cet état dans
+# [PÉDAGOGIE]           un environnement
+# [PÉDAGOGIE]           • le verrou sépare la demande de dépendances de leur résolution exacte
+# [PÉDAGOGIE]           • les extras évitent d'imposer les outils de développement au runtime
+# [PÉDAGOGIE]             minimal
+# [PÉDAGOGIE] À VOIR  — uv sync --frozen doit reproduire l'environnement sans réécrire le verrou.
+# [PÉDAGOGIE] PIÈGE   — Ajouter une dépendance sans mettre à jour puis valider le verrou crée un
+# [PÉDAGOGIE]           dépôt non reproductible.
+# [PÉDAGOGIE] GARDE   — Toutes les lignes marquées [PÉDAGOGIE] sont des commentaires : elles
+# [PÉDAGOGIE]           guident la lecture sans changer l'exécution.
+# [PÉDAGOGIE] ============================================================================
+
+# [PÉDAGOGIE] SECTION — `[build-system]` regroupe des réglages lus par le même outil ou composant.
 [build-system]
+# [PÉDAGOGIE] RÉGLAGE `requires` — valeur déclarative lue par l'outil associé à cette section.
 requires = ["hatchling"]
+# [PÉDAGOGIE] RÉGLAGE `build-backend` — valeur déclarative lue par l'outil associé à cette
+# [PÉDAGOGIE] section.
 build-backend = "hatchling.build"
 
+# [PÉDAGOGIE] SECTION — `[project]` regroupe des réglages lus par le même outil ou composant.
 [project]
+# [PÉDAGOGIE] RÉGLAGE `name` — valeur déclarative lue par l'outil associé à cette section.
 name = "indusense-sprint3-starter"
+# [PÉDAGOGIE] RÉGLAGE `version` — valeur déclarative lue par l'outil associé à cette section.
 version = "0.1.0"
+# [PÉDAGOGIE] RÉGLAGE `description` — valeur déclarative lue par l'outil associé à cette section.
 description = "Starter propre InduSense pour le Sprint 3 CISIA"
+# [PÉDAGOGIE] RUNTIME — borne les versions Python avec lesquelles le projet est garanti.
 requires-python = ">=3.13,<3.14"
+# [PÉDAGOGIE] DÉPENDANCES — le manifeste exprime les besoins ; uv.lock en fige la résolution
+# [PÉDAGOGIE] exacte.
 dependencies = [
+    # [PÉDAGOGIE] ÉLÉMENT — cette entrée appartient à la liste déclarative ouverte juste
+    # [PÉDAGOGIE] au-dessus.
     "pandas>=2.2",
+    # [PÉDAGOGIE] ÉLÉMENT — cette entrée appartient à la liste déclarative ouverte juste
+    # [PÉDAGOGIE] au-dessus.
     "numpy>=2.0",
+    # [PÉDAGOGIE] ÉLÉMENT — cette entrée appartient à la liste déclarative ouverte juste
+    # [PÉDAGOGIE] au-dessus.
     "scikit-learn>=1.5",
+    # [PÉDAGOGIE] ÉLÉMENT — cette entrée appartient à la liste déclarative ouverte juste
+    # [PÉDAGOGIE] au-dessus.
     "joblib>=1.4",
+    # [PÉDAGOGIE] ÉLÉMENT — cette entrée appartient à la liste déclarative ouverte juste
+    # [PÉDAGOGIE] au-dessus.
     "pydantic-settings>=2.3",
+    # [PÉDAGOGIE] ÉLÉMENT — cette entrée appartient à la liste déclarative ouverte juste
+    # [PÉDAGOGIE] au-dessus.
     "typer>=0.12",
+    # [PÉDAGOGIE] ÉLÉMENT — cette entrée appartient à la liste déclarative ouverte juste
+    # [PÉDAGOGIE] au-dessus.
     "loguru>=0.7",
 ]
 
+# [PÉDAGOGIE] SECTION — `[project.optional-dependencies]` regroupe des réglages lus par le même
+# [PÉDAGOGIE] outil ou composant.
 [project.optional-dependencies]
+# [PÉDAGOGIE] RÉGLAGE `dev` — valeur déclarative lue par l'outil associé à cette section.
 dev = [
+    # [PÉDAGOGIE] ÉLÉMENT — cette entrée appartient à la liste déclarative ouverte juste
+    # [PÉDAGOGIE] au-dessus.
     "pytest>=8.0",
+    # [PÉDAGOGIE] ÉLÉMENT — cette entrée appartient à la liste déclarative ouverte juste
+    # [PÉDAGOGIE] au-dessus.
     "ruff>=0.5",
+    # [PÉDAGOGIE] ÉLÉMENT — cette entrée appartient à la liste déclarative ouverte juste
+    # [PÉDAGOGIE] au-dessus.
     "black>=24.0",
+    # [PÉDAGOGIE] ÉLÉMENT — cette entrée appartient à la liste déclarative ouverte juste
+    # [PÉDAGOGIE] au-dessus.
     "pre-commit>=3.7",
 ]
 
+# [PÉDAGOGIE] SECTION — `[project.scripts]` regroupe des réglages lus par le même outil ou
+# [PÉDAGOGIE] composant.
 [project.scripts]
+# [PÉDAGOGIE] RÉGLAGE `indusense` — valeur déclarative lue par l'outil associé à cette section.
 indusense = "indusense.cli:main"
 
+# [PÉDAGOGIE] SECTION — `[tool.hatch.build.targets.wheel]` regroupe des réglages lus par le même
+# [PÉDAGOGIE] outil ou composant.
 [tool.hatch.build.targets.wheel]
+# [PÉDAGOGIE] RÉGLAGE `packages` — valeur déclarative lue par l'outil associé à cette section.
 packages = ["src/indusense"]
 
+# [PÉDAGOGIE] SECTION — `[tool.ruff]` regroupe des réglages lus par le même outil ou composant.
 [tool.ruff]
+# [PÉDAGOGIE] STYLE — partage la même limite entre formateur, apprenants et CI.
 line-length = 100
+# [PÉDAGOGIE] RÉGLAGE `target-version` — valeur déclarative lue par l'outil associé à cette
+# [PÉDAGOGIE] section.
 target-version = "py313"
+# [PÉDAGOGIE] RÉGLAGE `extend-exclude` — valeur déclarative lue par l'outil associé à cette
+# [PÉDAGOGIE] section.
 extend-exclude = [".venv*", "venv*", "dist", "build"]
 
+# [PÉDAGOGIE] SECTION — `[tool.ruff.lint]` regroupe des réglages lus par le même outil ou
+# [PÉDAGOGIE] composant.
 [tool.ruff.lint]
+# [PÉDAGOGIE] RÉGLAGE `select` — valeur déclarative lue par l'outil associé à cette section.
 select = ["E", "F", "I", "UP", "B"]
+# [PÉDAGOGIE] RÉGLAGE `ignore` — valeur déclarative lue par l'outil associé à cette section.
 ignore = ["B008"]
 
+# [PÉDAGOGIE] SECTION — `[tool.black]` regroupe des réglages lus par le même outil ou composant.
 [tool.black]
+# [PÉDAGOGIE] STYLE — partage la même limite entre formateur, apprenants et CI.
 line-length = 100
 
+# [PÉDAGOGIE] SECTION — `[tool.pytest.ini_options]` regroupe des réglages lus par le même outil ou
+# [PÉDAGOGIE] composant.
 [tool.pytest.ini_options]
+# [PÉDAGOGIE] COLLECTE — évite qu'un exercice autonome soit exécuté accidentellement avec la suite
+# [PÉDAGOGIE] racine.
 testpaths = ["tests"]
+# [PÉDAGOGIE] RÉGLAGE `pythonpath` — valeur déclarative lue par l'outil associé à cette section.
 pythonpath = ["src"]
