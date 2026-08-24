@@ -1,8 +1,28 @@
+# [PÉDAGOGIE] ============================================================================
+# [PÉDAGOGIE] FICHIER — scripts/evaluate_drift.py
+# [PÉDAGOGIE] MODULE  — M31–M32 — dérive, performance retardée et décision d'alerte
+# [PÉDAGOGIE] RÔLE    — Comparer une référence gelée à une fenêtre courante puis transformer les
+# [PÉDAGOGIE]           mesures en décision traçable.
+# [PÉDAGOGIE] THÉORIE — le PSI mesure un déplacement de distribution ; KS teste un écart
+# [PÉDAGOGIE]           statistique
+# [PÉDAGOGIE]           • une dérive d'entrée ne prouve pas à elle seule une dégradation de
+# [PÉDAGOGIE]             performance métier
+# [PÉDAGOGIE]           • seuil, fenêtre, segmentation et cooldown font partie du contrat de
+# [PÉDAGOGIE]             détection
+# [PÉDAGOGIE] À VOIR  — Le rapport doit conserver valeurs, seuils, décision, fenêtre, référence et
+# [PÉDAGOGIE]           horodatage UTC.
+# [PÉDAGOGIE] PIÈGE   — Changer les bins ou la référence entre deux fenêtres rend la comparaison
+# [PÉDAGOGIE]           difficile à interpréter.
+# [PÉDAGOGIE] GARDE   — Toutes les lignes marquées [PÉDAGOGIE] sont des commentaires : elles
+# [PÉDAGOGIE]           guident la lecture sans changer l'exécution.
+# [PÉDAGOGIE] ============================================================================
+
 # =============================================================================
 # scripts/evaluate_drift.py — Ronde de surveillance d'une fenêtre (m31)
 # Table PSI/KS (module indusense.monitoring.drift) + métriques au seuil GELÉ.
 # Usage : uv run python scripts/evaluate_drift.py --fenetre 1 [--reference normale]
 # =============================================================================
+# [PÉDAGOGIE] DÉPENDANCE — __future__ : apporte une dépendance explicitement visible au lecteur.
 from __future__ import annotations
 
 import argparse
@@ -17,10 +37,18 @@ from indusense.monitoring.drift import drift_table
 
 # Chemins centralisés : le script fonctionne depuis VS Code, PowerShell, zsh ou
 # bash même si le terminal n'est pas positionné exactement à la racine du dépôt.
+# [PÉDAGOGIE] CONSTANTE / CONTRAT — cette valeur nommée centralise un choix partagé au lieu de le
+# [PÉDAGOGIE] disperser.
 RACINE = Path(__file__).resolve().parents[1]
+# [PÉDAGOGIE] CONSTANTE / CONTRAT — cette valeur nommée centralise un choix partagé au lieu de le
+# [PÉDAGOGIE] disperser.
 DRIFT = RACINE / "data" / "drift"
 
 
+# [PÉDAGOGIE] BLOC `main` — orchestration : rendre l'ordre, les dépendances et les points d'échec
+# [PÉDAGOGIE] visibles.
+# [PÉDAGOGIE] CONTRAT — entrées : aucun argument explicite ; preuve : chaque étape doit annoncer
+# [PÉDAGOGIE] sa preuve avant que la suivante ne commence.
 def main() -> None:
     # ---------------------------------------------------------------------
     # 1. Lire les choix de la personne qui lance la ronde de surveillance.
@@ -55,6 +83,8 @@ def main() -> None:
     # Si une machine est fournie, le MÊME filtre s'applique aux deux côtés de la
     # comparaison. Comparer une machine à toute la flotte répondrait à une autre
     # question et pourrait créer un faux signal de dérive.
+    # [PÉDAGOGIE] DÉCISION — cette condition matérialise une règle testable ; lire séparément le
+    # [PÉDAGOGIE] cas vrai et le cas faux.
     if args.machine:
         df_ref, df_cur = (
             df_ref[df_ref["machine"] == args.machine],
@@ -133,6 +163,8 @@ def main() -> None:
     # clé (fenêtre + référence). Une relance met donc à jour au lieu de dupliquer.
     suivi = rp / "suivi_fenetres.csv"
     ligne = pd.DataFrame([m])
+    # [PÉDAGOGIE] DÉCISION — cette condition matérialise une règle testable ; lire séparément le
+    # [PÉDAGOGIE] cas vrai et le cas faux.
     if suivi.exists():
         # `dtype={"fenetre": str}` préserve « janvier » et empêche pandas de
         # traiter différemment les fenêtres numériques et textuelles.
@@ -144,5 +176,7 @@ def main() -> None:
     ligne.to_csv(suivi, index=False)
 
 
+# [PÉDAGOGIE] DÉCISION — cette condition matérialise une règle testable ; lire séparément le cas
+# [PÉDAGOGIE] vrai et le cas faux.
 if __name__ == "__main__":
     main()
