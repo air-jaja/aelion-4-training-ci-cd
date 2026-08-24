@@ -3,8 +3,8 @@ set -euo pipefail
 
 jalon="${1:-}"
 rattrapage="${2:-}"
-if [[ ! "$jalon" =~ ^[0-9]{2}-[a-z0-9-]+$ ]]; then
-  echo "Usage: bash scripts/formation/mettre_a_niveau.sh 03-j2-matin-m25 [--rattrapage]" >&2
+if [[ ! "$jalon" =~ ^(0[1-9]|1[0-2])(-[a-z0-9-]+)?$ ]]; then
+  echo "Usage: bash scripts/formation/mettre_a_niveau.sh 03 [--rattrapage]" >&2
   exit 2
 fi
 if [[ -n "$rattrapage" && "$rattrapage" != "--rattrapage" ]]; then
@@ -28,7 +28,8 @@ if [[ -n "$(git status --porcelain)" ]]; then
   exit 2
 fi
 
-remote_branch="jalon/$jalon"
+jalon_number="${jalon:0:2}"
+remote_branch="jalon/$jalon_number"
 git fetch origin "refs/heads/$remote_branch:refs/remotes/origin/$remote_branch"
 stamp="$(date +%Y%m%d-%H%M%S)"
 safe_branch="${branch//\//-}"
@@ -46,7 +47,7 @@ if ! git pull --no-rebase --no-edit origin "$remote_branch"; then
     exit 1
   fi
 
-  rescue="rattrapage/$jalon/$stamp"
+  rescue="rattrapage/$jalon_number/$stamp"
   git switch -c "$rescue" "origin/$remote_branch"
   echo "Mode rattrapage actif : $rescue"
   echo "Travail precedent preserve : $branch et $backup"
