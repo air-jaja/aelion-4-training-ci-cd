@@ -1,3 +1,19 @@
+# [PÉDAGOGIE] ============================================================================
+# [PÉDAGOGIE] FICHIER — Dockerfile
+# [PÉDAGOGIE] MODULE  — M27 — conteneurisation reproductible et moindre privilège
+# [PÉDAGOGIE] RÔLE    — Construire une image immuable qui contient seulement le runtime nécessaire
+# [PÉDAGOGIE]           à l'API.
+# [PÉDAGOGIE] THÉORIE — chaque instruction crée une couche réutilisable par le cache
+# [PÉDAGOGIE]           • un build multi-stage sépare les outils de construction du runtime final
+# [PÉDAGOGIE]           • un processus non-root réduit l'impact d'une compromission
+# [PÉDAGOGIE] À VOIR  — docker build puis l'inspection de l'image doivent confirmer tag,
+# [PÉDAGOGIE]           utilisateur, santé et démarrage.
+# [PÉDAGOGIE] PIÈGE   — latest et une installation non gelée rendent deux builds du même commit
+# [PÉDAGOGIE]           potentiellement différents.
+# [PÉDAGOGIE] GARDE   — Toutes les lignes marquées [PÉDAGOGIE] sont des commentaires : elles
+# [PÉDAGOGIE]           guident la lecture sans changer l'exécution.
+# [PÉDAGOGIE] ============================================================================
+
 # syntax=docker/dockerfile:1
 # =============================================================================
 #  FICHIER : Dockerfile
@@ -30,22 +46,27 @@
 # FROM = image de DÉPART de cette étape. 'python:3.13-slim' = une image officielle
 # Python 3.13 en version "slim" (allégée : moins de paquets système -> plus légère).
 # 'AS build' donne un NOM à cette étape pour pouvoir y faire référence plus tard.
+# [PÉDAGOGIE] ÉTAPE — fixe l'image de base ; chaque FROM ouvre une nouvelle phase de construction.
 FROM python:3.13-slim AS build
 
 # On copie l'exécutable 'uv' depuis une autre image (celle d'Astral, les auteurs d'uv).
 # 'uv' est un gestionnaire de paquets Python ULTRA rapide (remplace pip/venv ici).
 # '--from=...:0.11.19' épingle une VERSION précise d'uv -> builds reproductibles
 # (on aura toujours exactement le même uv, pas une version "surprise" du jour).
+# [PÉDAGOGIE] CACHE — copier d'abord les manifestes permet de réutiliser la couche de dépendances.
 COPY --from=ghcr.io/astral-sh/uv:0.11.19 /uv /usr/local/bin/uv
 
 # ENV = variables d'environnement (réglages lus par les outils pendant le build).
 #   UV_COMPILE_BYTECODE=1 : uv pré-compile le .py en .pyc -> démarrage plus rapide.
 #   UV_LINK_MODE=copy      : uv COPIE les fichiers au lieu de faire des liens durs,
 #                            ce qui évite des soucis quand on traverse des volumes/caches.
+# [PÉDAGOGIE] RUNTIME — valeur par défaut visible par le processus dans le conteneur.
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
 
 # WORKDIR = "dossier de travail" courant DANS l'image. Les commandes suivantes
 # s'exécuteront depuis /app, et les chemins relatifs partiront de là.
+# [PÉDAGOGIE] CHEMIN — rend les COPY et RUN suivants indépendants du dossier par défaut de
+# [PÉDAGOGIE] l'image.
 WORKDIR /app
 
 # On copie D'ABORD uniquement la "liste des dépendances" :
@@ -54,6 +75,7 @@ WORKDIR /app
 # Pourquoi seulement ces 2 fichiers d'abord ? Pour le CACHE : tant qu'ils ne
 # changent pas, Docker réutilise la couche d'installation sans tout refaire,
 # même si on a modifié le code source juste après. C'est une optimisation clé.
+# [PÉDAGOGIE] CACHE — copier d'abord les manifestes permet de réutiliser la couche de dépendances.
 COPY pyproject.toml uv.lock ./
 
 # Première installation : SEULEMENT les dépendances (pas encore notre code).
@@ -67,29 +89,37 @@ COPY pyproject.toml uv.lock ./
 #   --no-install-project : on n'installe pas encore InduSense lui-même (juste ses deps).
 #   --no-dev    : on saute les dépendances de développement (tests, linters...) :
 #                 inutiles en production -> image plus petite et plus sûre.
+# [PÉDAGOGIE] COUCHE — exécute une transformation au build et enregistre son résultat dans
+# [PÉDAGOGIE] l'image.
 RUN --mount=type=cache,target=/root/.cache/uv uv sync --frozen --no-install-project --no-dev
 
 # MAINTENANT seulement on copie le code source de l'application.
 # Comme c'est APRÈS l'installation des deps, modifier le code n'invalide pas
 # la (longue) couche d'installation précédente : on garde un build rapide.
+# [PÉDAGOGIE] CACHE — copier d'abord les manifestes permet de réutiliser la couche de dépendances.
 COPY src ./src
 
 # Deuxième installation : on installe le PROJET InduSense lui-même.
 #   --no-editable : installe une COPIE figée (un "wheel"), PAS un lien vers le code.
 #                   En "editable", le paquet pointerait vers ./src ; ici on veut une
 #                   version autonome et stable, adaptée à une image de production.
+# [PÉDAGOGIE] COUCHE — exécute une transformation au build et enregistre son résultat dans
+# [PÉDAGOGIE] l'image.
 RUN --mount=type=cache,target=/root/.cache/uv uv sync --frozen --no-dev --no-editable
 
 # ---- runtime : image mince, utilisateur non-root ----
 # NOUVELLE étape FROM = on REPART d'une image Python propre pour l'image FINALE.
 # Tout ce qui était dans l'étape 'build' (uv, caches, fichiers temporaires) est
 # ABANDONNÉ ici : on ne récupérera que le strict nécessaire -> image minimale.
+# [PÉDAGOGIE] ÉTAPE — fixe l'image de base ; chaque FROM ouvre une nouvelle phase de construction.
 FROM python:3.13-slim AS runtime
 
 # Applique les correctifs de sécurité Debian disponibles au moment du build.
 # pip/setuptools ne servent pas à l'exécution : le venv est déjà construit et
 # copié depuis l'étape précédente. On les retire donc de l'image finale, ce qui
 # réduit la surface d'attaque et évite de scanner le SBOM interne de pip.
+# [PÉDAGOGIE] COUCHE — exécute une transformation au build et enregistre son résultat dans
+# [PÉDAGOGIE] l'image.
 RUN apt-get update \
     && apt-get upgrade -y \
     && rm -rf /var/lib/apt/lists/* \
@@ -101,9 +131,13 @@ RUN apt-get update \
 # Pourquoi ? Par défaut un conteneur tourne en 'root' (tout-puissant). Si l'appli
 # est compromise, un attaquant hériterait des droits root. Tourner en utilisateur
 # limité réduit fortement les dégâts possibles. (On bascule dessus plus bas.)
+# [PÉDAGOGIE] COUCHE — exécute une transformation au build et enregistre son résultat dans
+# [PÉDAGOGIE] l'image.
 RUN useradd -m -u 10001 appuser
 
 # Dossier de travail de l'image finale (mêmes raisons que plus haut).
+# [PÉDAGOGIE] CHEMIN — rend les COPY et RUN suivants indépendants du dossier par défaut de
+# [PÉDAGOGIE] l'image.
 WORKDIR /app
 
 # Variables d'environnement de l'image finale (le '\' relie les lignes : une seule ENV) :
@@ -114,6 +148,7 @@ WORKDIR /app
 #       -> les messages apparaissent en TEMPS RÉEL dans 'docker logs' (debug plus facile).
 #   INDUSENSE_MODEL_DIR=/app/artifacts/models : dit à l'appli OÙ trouver le modèle
 #       (chemin du modèle embarqué dans l'image — cf. Variante A ci-dessous).
+# [PÉDAGOGIE] RUNTIME — valeur par défaut visible par le processus dans le conteneur.
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     INDUSENSE_MODEL_DIR=/app/artifacts/models
@@ -121,21 +156,25 @@ ENV PATH="/app/.venv/bin:$PATH" \
 # On récupère depuis l'étape 'build' UNIQUEMENT l'environnement virtuel déjà installé.
 # '--from=build' = "va chercher dans l'étape nommée build". C'est tout l'intérêt du
 # multi-stage : on importe le résultat (le .venv prêt) sans importer les outils de build.
+# [PÉDAGOGIE] CACHE — copier d'abord les manifestes permet de réutiliser la couche de dépendances.
 COPY --from=build /app/.venv /app/.venv
 
 # Variante A : modèle livré dans l'image. (Variante B : retirer la ligne ci-dessous,
 # voir README §Packaging — il faut alors data/ + entraînement, pas un simple `indusense train` runtime.)
 # Ici on COPIE le modèle pré-entraîné DANS l'image. Conséquence : dès le démarrage,
 # l'API peut prédire immédiatement (pas besoin d'entraîner ni de télécharger un modèle).
+# [PÉDAGOGIE] CACHE — copier d'abord les manifestes permet de réutiliser la couche de dépendances.
 COPY artifacts/models ./artifacts/models
 
 # À partir d'ICI, on bascule sur l'utilisateur non privilégié créé plus haut.
 # Toutes les instructions suivantes ET le processus de l'appli tourneront en 'appuser'.
+# [PÉDAGOGIE] SÉCURITÉ — abandonne les privilèges root pour réduire l'impact d'une compromission.
 USER appuser
 
 # EXPOSE documente le PORT sur lequel l'application écoute (ici 8000, le port d'uvicorn).
 # C'est surtout informatif/déclaratif : ça aide les outils et lecteurs à savoir quel
 # port ouvrir. La vraie publication "vers l'extérieur" se fait via 'ports:' (compose).
+# [PÉDAGOGIE] DOCUMENTATION — indique le port attendu sans le publier automatiquement sur l'hôte.
 EXPOSE 8000
 
 # HEALTHCHECK = "examen de santé" périodique du conteneur : Docker exécute une
@@ -148,6 +187,7 @@ EXPOSE 8000
 #   - sys.exit(0 if status==200 else 1) : sort avec le code 0 (=OK/sain) si le serveur
 #       répond 200, sinon code 1 (=échec). Docker lit ce code pour juger la santé.
 # Utilité : compose/orchestrateur peut attendre que l'API soit réellement prête.
+# [PÉDAGOGIE] SANTÉ — fournit au moteur un signal actif distinct de l'existence du processus.
 HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
   CMD python -c "import urllib.request,sys;sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)"
 
@@ -161,4 +201,6 @@ HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
 #   --port 8000               : port d'écoute (cohérent avec EXPOSE 8000 ci-dessus).
 # Forme "JSON/exec" (liste de chaînes) recommandée : pas de shell intermédiaire,
 # donc l'appli reçoit correctement les signaux d'arrêt (stop propre du conteneur).
+# [PÉDAGOGIE] DÉMARRAGE — définit la commande ou les arguments par défaut, surchargeables à
+# [PÉDAGOGIE] l'exécution.
 CMD ["uvicorn", "indusense.api.main:app", "--host", "0.0.0.0", "--port", "8000"]

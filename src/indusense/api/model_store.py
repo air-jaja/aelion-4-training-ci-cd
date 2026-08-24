@@ -1,3 +1,21 @@
+# [PÉDAGOGIE] ============================================================================
+# [PÉDAGOGIE] FICHIER — src/indusense/api/model_store.py
+# [PÉDAGOGIE] MODULE  — M25 — contrat d'API, validation et preuve de readiness
+# [PÉDAGOGIE] RÔLE    — Exposer le modèle derrière un contrat HTTP explicite, testable et
+# [PÉDAGOGIE]           observable.
+# [PÉDAGOGIE] THÉORIE — Pydantic valide la forme et les invariants avant l'appel au modèle
+# [PÉDAGOGIE]           • liveness et readiness répondent à deux questions opérationnelles
+# [PÉDAGOGIE]             différentes
+# [PÉDAGOGIE]           • l'injection de dépendances permet d'isoler le chargement du modèle dans
+# [PÉDAGOGIE]             les tests
+# [PÉDAGOGIE] À VOIR  — Swagger/TestClient doivent rendre visibles les entrées, sorties et codes
+# [PÉDAGOGIE]           2xx/4xx/5xx attendus.
+# [PÉDAGOGIE] PIÈGE   — Une réponse 200 ne suffit pas si le schéma, la version du modèle ou la
+# [PÉDAGOGIE]           normalisation sont faux.
+# [PÉDAGOGIE] GARDE   — Toutes les lignes marquées [PÉDAGOGIE] sont des commentaires : elles
+# [PÉDAGOGIE]           guident la lecture sans changer l'exécution.
+# [PÉDAGOGIE] ============================================================================
+
 # =============================================================================
 #  src/indusense/api/model_store.py  —  STOCKAGE du modèle de ML en mémoire
 # -----------------------------------------------------------------------------
@@ -30,6 +48,7 @@
 # =============================================================================
 
 # Annotations de type modernes (voir explication dans les autres fichiers).
+# [PÉDAGOGIE] DÉPENDANCE — __future__ : apporte une dépendance explicitement visible au lecteur.
 from __future__ import annotations
 
 # `json` : module standard pour lire/écrire du JSON. Ici on l'utilise pour lire
@@ -60,6 +79,10 @@ from indusense.models.tabular import load_model
 # -----------------------------------------------------------------------------
 #  La structure « ModelBundle » : le modèle + ses informations indispensables.
 # -----------------------------------------------------------------------------
+# [PÉDAGOGIE] TYPE `ModelBundle` — regroupe un état cohérent et le contrat des opérations
+# [PÉDAGOGIE] associées.
+# [PÉDAGOGIE] THÉORIE — nommer ce type rend les invariants visibles et facilite les tests à la
+# [PÉDAGOGIE] frontière.
 @dataclass
 class ModelBundle:
     # `@dataclass` ci-dessus génère automatiquement le constructeur. On déclare
@@ -96,12 +119,18 @@ class ModelBundle:
 #   - Le préfixe « _ » indique un détail interne au module.
 #   - Tant que `_BUNDLE` vaut None, la route /ready renverra 503 (pas prêt) : on
 #     refuse de prédire tant que le modèle n'est pas réellement disponible.
+# [PÉDAGOGIE] CONSTANTE / CONTRAT — cette valeur nommée centralise un choix partagé au lieu de le
+# [PÉDAGOGIE] disperser.
 _BUNDLE: ModelBundle | None = None
 
 
 # -----------------------------------------------------------------------------
 #  Fonction de CHARGEMENT : lit le modèle + ses métadonnées depuis le disque.
 # -----------------------------------------------------------------------------
+# [PÉDAGOGIE] BLOC `load_bundle` — frontière d'entrée : convertir une représentation externe en
+# [PÉDAGOGIE] structure interne validée.
+# [PÉDAGOGIE] CONTRAT — entrées : model_dir, threshold ; preuve : vérifier schéma, types, ordre et
+# [PÉDAGOGIE] erreurs explicites avant tout calcul aval.
 def load_bundle(model_dir: Path, threshold: float) -> ModelBundle:
     # Paramètres :
     #   - `model_dir` : le DOSSIER qui contient les fichiers du modèle.
@@ -118,6 +147,8 @@ def load_bundle(model_dir: Path, threshold: float) -> ModelBundle:
     meta = json.loads((model_dir / "model_metadata.json").read_text())
 
     # On construit et on RENVOIE le bundle, en remplissant ses quatre champs :
+    # [PÉDAGOGIE] SORTIE — cette valeur constitue le contrat remis à l'appelant ; son type et son
+    # [PÉDAGOGIE] sens doivent rester stables.
     return ModelBundle(
         # On charge le modèle entraîné depuis `rf.joblib` (rf = random forest).
         # `load_model` gère la désérialisation ; on lui passe le chemin du fichier.
@@ -136,6 +167,10 @@ def load_bundle(model_dir: Path, threshold: float) -> ModelBundle:
 # -----------------------------------------------------------------------------
 #  Accès au bundle : la fonction « injectée » dans les routes via Depends.
 # -----------------------------------------------------------------------------
+# [PÉDAGOGIE] BLOC `get_model_bundle` — unité de responsabilité : isoler un comportement nommable,
+# [PÉDAGOGIE] testable et réutilisable.
+# [PÉDAGOGIE] CONTRAT — entrées : aucun argument explicite ; preuve : l'appelant doit pouvoir
+# [PÉDAGOGIE] vérifier la sortie ou l'effet de bord annoncé.
 def get_model_bundle() -> ModelBundle | None:
     # Cette fonction se contente de RENVOYER l'état global `_BUNDLE`.
     #   - Si le modèle est chargé -> elle renvoie le bundle.
@@ -146,4 +181,6 @@ def get_model_bundle() -> ModelBundle | None:
     # d'« injecter » proprement le bundle dans chaque route qui le demande.
     # Astuce : on relit `_BUNDLE` à chaque appel (et non une copie capturée),
     # donc dès que main.py l'a rempli au démarrage, toutes les routes le voient.
+    # [PÉDAGOGIE] SORTIE — cette valeur constitue le contrat remis à l'appelant ; son type et son
+    # [PÉDAGOGIE] sens doivent rester stables.
     return _BUNDLE

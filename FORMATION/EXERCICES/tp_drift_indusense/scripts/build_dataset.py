@@ -1,3 +1,22 @@
+# [PÉDAGOGIE] ============================================================================
+# [PÉDAGOGIE] FICHIER — FORMATION/EXERCICES/tp_drift_indusense/scripts/build_dataset.py
+# [PÉDAGOGIE] MODULE  — M31–M32 — dérive, performance retardée et décision d'alerte
+# [PÉDAGOGIE] RÔLE    — Comparer une référence gelée à une fenêtre courante puis transformer les
+# [PÉDAGOGIE]           mesures en décision traçable.
+# [PÉDAGOGIE] THÉORIE — le PSI mesure un déplacement de distribution ; KS teste un écart
+# [PÉDAGOGIE]           statistique
+# [PÉDAGOGIE]           • une dérive d'entrée ne prouve pas à elle seule une dégradation de
+# [PÉDAGOGIE]             performance métier
+# [PÉDAGOGIE]           • seuil, fenêtre, segmentation et cooldown font partie du contrat de
+# [PÉDAGOGIE]             détection
+# [PÉDAGOGIE] À VOIR  — Le rapport doit conserver valeurs, seuils, décision, fenêtre, référence et
+# [PÉDAGOGIE]           horodatage UTC.
+# [PÉDAGOGIE] PIÈGE   — Changer les bins ou la référence entre deux fenêtres rend la comparaison
+# [PÉDAGOGIE]           difficile à interpréter.
+# [PÉDAGOGIE] GARDE   — Toutes les lignes marquées [PÉDAGOGIE] sont des commentaires : elles
+# [PÉDAGOGIE]           guident la lecture sans changer l'exécution.
+# [PÉDAGOGIE] ============================================================================
+
 """InduSense — Construction du jeu drift : jointure §95 + rolling anti-fuite + cible contrôlée.
 
 Données CAPTEURS 100 % réelles (capteurs_temperature.csv, capteurs_pression.tsv, machine.sql),
@@ -22,20 +41,37 @@ Fenêtres produites (data/) :
 
 Usage : python scripts/build_dataset.py [--datas /chemin/vers/indusense/datas]
 """
+# [PÉDAGOGIE] DÉPENDANCE — __future__ : apporte une dépendance explicitement visible au lecteur.
 from __future__ import annotations
 import argparse, re
 from pathlib import Path
 import numpy as np
 import pandas as pd
 
+# [PÉDAGOGIE] CONSTANTE / CONTRAT — cette valeur nommée centralise un choix partagé au lieu de le
+# [PÉDAGOGIE] disperser.
 RACINE = Path(__file__).resolve().parents[1]
+# [PÉDAGOGIE] CONSTANTE / CONTRAT — cette valeur nommée centralise un choix partagé au lieu de le
+# [PÉDAGOGIE] disperser.
 _D = re.compile(r"(\d+)")
 
+# [PÉDAGOGIE] BLOC `normalize_machine_id` — unité de responsabilité : isoler un comportement
+# [PÉDAGOGIE] nommable, testable et réutilisable.
+# [PÉDAGOGIE] CONTRAT — entrées : raw ; preuve : l'appelant doit pouvoir vérifier la sortie ou
+# [PÉDAGOGIE] l'effet de bord annoncé.
 def normalize_machine_id(raw: str) -> str:
     m = _D.search(str(raw))
+    # [PÉDAGOGIE] DÉCISION — cette condition matérialise une règle testable ; lire séparément le
+    # [PÉDAGOGIE] cas vrai et le cas faux.
     if not m: raise ValueError(f"machine_id sans numéro : {raw!r}")
+    # [PÉDAGOGIE] SORTIE — cette valeur constitue le contrat remis à l'appelant ; son type et son
+    # [PÉDAGOGIE] sens doivent rester stables.
     return f"MACH-{int(m.group(1)):02d}"
 
+# [PÉDAGOGIE] BLOC `charger_et_joindre` — unité de responsabilité : isoler un comportement
+# [PÉDAGOGIE] nommable, testable et réutilisable.
+# [PÉDAGOGIE] CONTRAT — entrées : datas ; preuve : l'appelant doit pouvoir vérifier la sortie ou
+# [PÉDAGOGIE] l'effet de bord annoncé.
 def charger_et_joindre(datas: Path) -> pd.DataFrame:
     t = pd.read_csv(datas / "capteurs_temperature.csv", sep=";")
     t["timestamp"] = pd.to_datetime(t["timestamp"])
@@ -49,38 +85,72 @@ def charger_et_joindre(datas: Path) -> pd.DataFrame:
         on="timestamp", by="machine", direction="nearest",
         tolerance=pd.Timedelta(minutes=90),
     ).dropna(subset=["pressure_bar"])
+    # [PÉDAGOGIE] SORTIE — cette valeur constitue le contrat remis à l'appelant ; son type et son
+    # [PÉDAGOGIE] sens doivent rester stables.
     return s.sort_values(["machine", "timestamp"]).reset_index(drop=True)
 
+# [PÉDAGOGIE] BLOC `enrichir_rolling` — unité de responsabilité : isoler un comportement nommable,
+# [PÉDAGOGIE] testable et réutilisable.
+# [PÉDAGOGIE] CONTRAT — entrées : s ; preuve : l'appelant doit pouvoir vérifier la sortie ou
+# [PÉDAGOGIE] l'effet de bord annoncé.
 def enrichir_rolling(s: pd.DataFrame) -> pd.DataFrame:
     """Features rolling anti-fuite (m9) : shift(1) AVANT rolling, par machine."""
     g = s.groupby("machine", group_keys=False)
+    # [PÉDAGOGIE] ITÉRATION — appliquer la même règle à chaque élément permet de raisonner sur un
+    # [PÉDAGOGIE] invariant stable.
     for col in ["temperature", "pressure_bar"]:
         base = g[col].shift(1)
         s[f"{col}_moy6h"] = base.groupby(s["machine"]).rolling(6, min_periods=3).mean().reset_index(drop=True)
         s[f"{col}_moy24h"] = base.groupby(s["machine"]).rolling(24, min_periods=12).mean().reset_index(drop=True)
         s[f"{col}_std24h"] = base.groupby(s["machine"]).rolling(24, min_periods=12).std().reset_index(drop=True)
         s[f"{col}_delta6h"] = s[col] - s[f"{col}_moy6h"]
+    # [PÉDAGOGIE] SORTIE — cette valeur constitue le contrat remis à l'appelant ; son type et son
+    # [PÉDAGOGIE] sens doivent rester stables.
     return s
 
+# [PÉDAGOGIE] CONSTANTE / CONTRAT — cette valeur nommée centralise un choix partagé au lieu de le
+# [PÉDAGOGIE] disperser.
 FEATURES_MODELE = ["temperature", "pressure_bar"] + [
     f"{c}_{k}" for c in ["temperature", "pressure_bar"] for k in ["moy6h", "moy24h", "std24h", "delta6h"]
 ]
+# [PÉDAGOGIE] CONSTANTE / CONTRAT — cette valeur nommée centralise un choix partagé au lieu de le
+# [PÉDAGOGIE] disperser.
 B0 = -3.75  # calé pour ~5 % de panne (proche des 4,78 % du flux réel)
 
+# [PÉDAGOGIE] BLOC `_sig` — unité de responsabilité : isoler un comportement nommable, testable et
+# [PÉDAGOGIE] réutilisable.
+# [PÉDAGOGIE] CONTRAT — entrées : x ; preuve : l'appelant doit pouvoir vérifier la sortie ou
+# [PÉDAGOGIE] l'effet de bord annoncé.
 def _sig(x): return 1.0 / (1.0 + np.exp(-x))
 
+# [PÉDAGOGIE] BLOC `_scores_relatifs` — phase d'inférence ou d'évaluation : appliquer un contrat
+# [PÉDAGOGIE] gelé à des observations nouvelles.
+# [PÉDAGOGIE] CONTRAT — entrées : s ; preuve : contrôler ordre des features, seuil, métriques et
+# [PÉDAGOGIE] provenance du modèle.
 def _scores_relatifs(s):
     zt = (s["temperature_delta6h"] / s["temperature_std24h"].clip(lower=0.5)).clip(-4, 4)
     zp = (s["pressure_bar_delta6h"] / s["pressure_bar_std24h"].clip(lower=0.5)).clip(-4, 4)
+    # [PÉDAGOGIE] SORTIE — cette valeur constitue le contrat remis à l'appelant ; son type et son
+    # [PÉDAGOGIE] sens doivent rester stables.
     return zt, zp
 
+# [PÉDAGOGIE] BLOC `tirer_labels` — unité de responsabilité : isoler un comportement nommable,
+# [PÉDAGOGIE] testable et réutilisable.
+# [PÉDAGOGIE] CONTRAT — entrées : s ; preuve : l'appelant doit pouvoir vérifier la sortie ou
+# [PÉDAGOGIE] l'effet de bord annoncé.
 def tirer_labels(s: pd.DataFrame) -> pd.DataFrame:
     zt, zp = _scores_relatifs(s)
     rng1, rng2 = np.random.default_rng(42), np.random.default_rng(4242)
     s["panne_v1"] = (rng1.random(len(s)) < _sig(B0 + 1.3 * zt - 1.0 * zp)).astype(int)
     s["panne_v2"] = (rng2.random(len(s)) < _sig(B0 - 1.3 * zt + 1.0 * zp)).astype(int)
+    # [PÉDAGOGIE] SORTIE — cette valeur constitue le contrat remis à l'appelant ; son type et son
+    # [PÉDAGOGIE] sens doivent rester stables.
     return s
 
+# [PÉDAGOGIE] BLOC `main` — orchestration : rendre l'ordre, les dépendances et les points d'échec
+# [PÉDAGOGIE] visibles.
+# [PÉDAGOGIE] CONTRAT — entrées : aucun argument explicite ; preuve : chaque étape doit annoncer
+# [PÉDAGOGIE] sa preuve avant que la suivante ne commence.
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--datas", type=Path, default=RACINE.parents[1] / "indusense" / "datas",
@@ -106,16 +176,22 @@ def main() -> None:
     fev = s[mois == "2026-02"]; janv = s[mois == "2026-01"]
     fev[cols + ["panne_v1"]].rename(columns={"panne_v1": "panne_24h"}).to_csv(dd / "fenetre_1.csv", index=False)
     f2 = fev.copy()
+    # [PÉDAGOGIE] ITÉRATION — appliquer la même règle à chaque élément permet de raisonner sur un
+    # [PÉDAGOGIE] invariant stable.
     for c in ["temperature", "temperature_moy6h", "temperature_moy24h"]:
         f2[c] = f2[c] + 8.0   # le capteur ment de +8 °C ; la réalité (labels v1) est inchangée
     f2[cols + ["panne_v1"]].rename(columns={"panne_v1": "panne_24h"}).to_csv(dd / "fenetre_2.csv", index=False)
     fev[cols + ["panne_v2"]].rename(columns={"panne_v2": "panne_24h"}).to_csv(dd / "fenetre_3.csv", index=False)
     janv[cols + ["panne_v1"]].rename(columns={"panne_v1": "panne_24h"}).to_csv(dd / "fenetre_janvier.csv", index=False)
 
+    # [PÉDAGOGIE] ITÉRATION — appliquer la même règle à chaque élément permet de raisonner sur un
+    # [PÉDAGOGIE] invariant stable.
     for f in ["reference", "reference_normale", "reference_haute", "fenetre_1", "fenetre_2", "fenetre_3", "fenetre_janvier"]:
         df = pd.read_csv(dd / f"{f}.csv")
         extra = f" · panne {df['panne_24h'].mean():.2%}" if "panne_24h" in df else ""
         print(f"  data/{f}.csv : {len(df)} lignes{extra}")
 
+# [PÉDAGOGIE] DÉCISION — cette condition matérialise une règle testable ; lire séparément le cas
+# [PÉDAGOGIE] vrai et le cas faux.
 if __name__ == "__main__":
     main()
