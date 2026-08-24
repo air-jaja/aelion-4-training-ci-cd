@@ -155,32 +155,36 @@ Avant chaque mise à niveau, le dépôt doit être propre.
 ### Windows
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\formation\mettre_a_niveau.ps1 -Jalon 03-j2-matin-m25
-powershell -ExecutionPolicy Bypass -File .\scripts\formation\verifier_jalon.ps1 -Jalon 03-j2-matin-m25
+powershell -ExecutionPolicy Bypass -File .\scripts\formation\mettre_a_niveau.ps1 -Jalon 03
+powershell -ExecutionPolicy Bypass -File .\scripts\formation\verifier_jalon.ps1 -Jalon 03
 ```
 
 En cas de conflit :
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\formation\mettre_a_niveau.ps1 -Jalon 03-j2-matin-m25 -Rattrapage
+powershell -ExecutionPolicy Bypass -File .\scripts\formation\mettre_a_niveau.ps1 -Jalon 03 -Rattrapage
 ```
 
 ### macOS ou Linux
 
 ```bash
-bash scripts/formation/mettre_a_niveau.sh 03-j2-matin-m25
-bash scripts/formation/verifier_jalon.sh 03-j2-matin-m25
+bash scripts/formation/mettre_a_niveau.sh 03
+bash scripts/formation/verifier_jalon.sh 03
 ```
 
 En cas de conflit :
 
 ```bash
-bash scripts/formation/mettre_a_niveau.sh 03-j2-matin-m25 --rattrapage
+bash scripts/formation/mettre_a_niveau.sh 03 --rattrapage
 ```
 
 Les deux variantes créent une branche `sauvegarde/...` avant la fusion. Le mode
 rattrapage annule une fusion conflictuelle et crée une branche
 `rattrapage/...`; il ne supprime et ne réécrit aucun commit.
+
+Le nombre `03` cible la branche publique `jalon/03`. Un ancien slug complet tel
+que `03-j2-matin-m25` reste accepté, mais le numéro court est la notation de
+référence pour les douze demi-journées.
 
 ## 5. M23 - package, tests et qualité
 
