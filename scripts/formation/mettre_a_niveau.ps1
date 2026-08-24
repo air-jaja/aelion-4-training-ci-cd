@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [ValidatePattern('^\d{2}-[a-z0-9-]+$')]
+    [ValidatePattern('^(0[1-9]|1[0-2])(?:-[a-z0-9-]+)?$')]
     [string]$Jalon,
 
     [switch]$Rattrapage
@@ -36,7 +36,8 @@ if ($dirty.Count -gt 0) {
     throw 'Travail non enregistre. Faites git status, git add -A puis git commit avant le jalon.'
 }
 
-$remoteBranch = "jalon/$Jalon"
+$jalonNumber = $Jalon.Substring(0, 2)
+$remoteBranch = "jalon/$jalonNumber"
 Invoke-Git fetch origin "refs/heads/$remoteBranch`:refs/remotes/origin/$remoteBranch"
 
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
@@ -56,7 +57,7 @@ if ($LASTEXITCODE -ne 0) {
         throw "Fusion annulee. Relancez avec -Rattrapage pour repartir du jalon officiel ; votre travail reste dans '$branch' et '$backup'."
     }
 
-    $rescue = "rattrapage/$Jalon/$stamp"
+    $rescue = "rattrapage/$jalonNumber/$stamp"
     Invoke-Git switch -c $rescue "origin/$remoteBranch"
     Write-Host "Mode rattrapage actif : $rescue"
     Write-Host "Travail precedent preserve : $branch et $backup"
