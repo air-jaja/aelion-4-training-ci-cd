@@ -1,3 +1,21 @@
+# [PÉDAGOGIE] ============================================================================
+# [PÉDAGOGIE] FICHIER — tests/test_security.py
+# [PÉDAGOGIE] MODULE  — M26 — sécurité d'API et défense en profondeur
+# [PÉDAGOGIE] RÔLE    — Appliquer des garde-fous indépendants aux frontières HTTP et prouver leurs
+# [PÉDAGOGIE]           codes d'erreur.
+# [PÉDAGOGIE] THÉORIE — authentification, taille maximale et limitation de débit couvrent des
+# [PÉDAGOGIE]           menaces distinctes
+# [PÉDAGOGIE]           • une règle serveur ne doit pas être surchargeable par un paramètre fourni
+# [PÉDAGOGIE]             par le client
+# [PÉDAGOGIE]           • 400, 401, 413 et 429 décrivent des contrats d'échec différents
+# [PÉDAGOGIE] À VOIR  — Les tests doivent observer le statut HTTP et l'absence de contournement,
+# [PÉDAGOGIE]           pas seulement une exception Python.
+# [PÉDAGOGIE] PIÈGE   — Un rate limit en mémoire ne se partage pas entre processus ; documenter
+# [PÉDAGOGIE]           cette limite de conception.
+# [PÉDAGOGIE] GARDE   — Toutes les lignes marquées [PÉDAGOGIE] sont des commentaires : elles
+# [PÉDAGOGIE]           guident la lecture sans changer l'exécution.
+# [PÉDAGOGIE] ============================================================================
+
 # =============================================================================
 # FICHIER : tests/test_security.py
 # RÔLE    : Tests des PROTECTIONS de sécurité du module 26 (garde-fous de l'API).
@@ -22,6 +40,7 @@
 # pytest : le framework de tests. On s'en sert ici notamment pour
 # ``pytest.raises(...)``, qui permet de vérifier qu'un bloc de code lève bien
 # une exception attendue (sinon le test échoue).
+# [PÉDAGOGIE] DÉPENDANCE — pytest : exprime les garanties sous forme de tests exécutables.
 import pytest
 
 # HTTPException : l'exception "HTTP" de FastAPI. Quand le code de sécurité veut
@@ -40,9 +59,15 @@ from indusense.api import security
 from indusense.api.main import app
 
 # On crée le client de test une seule fois, partagé par les tests de ce fichier.
+# [PÉDAGOGIE] CONSTANTE / CONTRAT — cette valeur nommée centralise un choix partagé au lieu de le
+# [PÉDAGOGIE] disperser.
 client = TestClient(app)
 
 
+# [PÉDAGOGIE] BLOC `test_payload_too_large_returns_413` — ce test transforme un comportement
+# [PÉDAGOGIE] attendu en contrat de non-régression.
+# [PÉDAGOGIE] CONTRAT — entrées : aucun argument explicite ; preuve : la dernière assertion est
+# [PÉDAGOGIE] l'oracle : son échec doit pointer la garantie cassée.
 def test_payload_too_large_returns_413():
     """Vérifie que l'API rejette un corps de requête TROP VOLUMINEUX (-> 413).
 
@@ -63,9 +88,14 @@ def test_payload_too_large_returns_413():
     )
 
     # Comportement attendu : 413, car le corps dépasse la taille maximale permise.
+    # [PÉDAGOGIE] ORACLE — l'assertion compare le résultat observé au contrat attendu par ce test.
     assert r.status_code == 413
 
 
+# [PÉDAGOGIE] BLOC `test_invalid_content_length_returns_400` — ce test transforme un comportement
+# [PÉDAGOGIE] attendu en contrat de non-régression.
+# [PÉDAGOGIE] CONTRAT — entrées : aucun argument explicite ; preuve : la dernière assertion est
+# [PÉDAGOGIE] l'oracle : son échec doit pointer la garantie cassée.
 def test_invalid_content_length_returns_400():
     """Une taille déclarée illisible doit produire une erreur client, jamais un crash serveur."""
     r = client.post(
@@ -74,19 +104,31 @@ def test_invalid_content_length_returns_400():
         content=b"{}",
     )
 
+    # [PÉDAGOGIE] ORACLE — l'assertion compare le résultat observé au contrat attendu par ce test.
     assert r.status_code == 400
+    # [PÉDAGOGIE] ORACLE — l'assertion compare le résultat observé au contrat attendu par ce test.
     assert r.json() == {"detail": "Content-Length invalide"}
 
 
+# [PÉDAGOGIE] BLOC `test_rate_limit_policy_is_not_exposed_as_query_parameters` — ce test
+# [PÉDAGOGIE] transforme un comportement attendu en contrat de non-régression.
+# [PÉDAGOGIE] CONTRAT — entrées : aucun argument explicite ; preuve : la dernière assertion est
+# [PÉDAGOGIE] l'oracle : son échec doit pointer la garantie cassée.
 def test_rate_limit_policy_is_not_exposed_as_query_parameters():
     """Un client ne doit pas pouvoir augmenter la limite via ``?limit=`` ou ``?window=``."""
     operation = app.openapi()["paths"]["/predict-tabular"]["post"]
     parameter_names = {parameter["name"] for parameter in operation.get("parameters", [])}
 
+    # [PÉDAGOGIE] ORACLE — l'assertion compare le résultat observé au contrat attendu par ce test.
     assert "limit" not in parameter_names
+    # [PÉDAGOGIE] ORACLE — l'assertion compare le résultat observé au contrat attendu par ce test.
     assert "window" not in parameter_names
 
 
+# [PÉDAGOGIE] BLOC `test_rate_limit_blocks_after_limit` — ce test transforme un comportement
+# [PÉDAGOGIE] attendu en contrat de non-régression.
+# [PÉDAGOGIE] CONTRAT — entrées : aucun argument explicite ; preuve : la dernière assertion est
+# [PÉDAGOGIE] l'oracle : son échec doit pointer la garantie cassée.
 def test_rate_limit_blocks_after_limit():
     """Vérifie la LIMITATION DE DÉBIT : au-delà de N requêtes, on bloque (-> 429).
 
@@ -108,10 +150,17 @@ def test_rate_limit_blocks_after_limit():
     # attend en entrée. Pas besoin d'une vraie requête HTTP complète :
     # il suffit de fournir la même "forme" (les attributs réellement lus).
 
+    # [PÉDAGOGIE] TYPE `_Client` — regroupe un état cohérent et le contrat des opérations
+    # [PÉDAGOGIE] associées.
+    # [PÉDAGOGIE] THÉORIE — nommer ce type rend les invariants visibles et facilite les tests à la
+    # [PÉDAGOGIE] frontière.
     class _Client:
         # rate_limit lit l'adresse IP via req.client.host : on en met une factice.
         host = "9.9.9.9"
 
+    # [PÉDAGOGIE] TYPE `_Req` — regroupe un état cohérent et le contrat des opérations associées.
+    # [PÉDAGOGIE] THÉORIE — nommer ce type rend les invariants visibles et facilite les tests à la
+    # [PÉDAGOGIE] frontière.
     class _Req:
         # rate_limit lit req.client : on lui donne une instance de _Client ci-dessus.
         client = _Client()
@@ -121,16 +170,21 @@ def test_rate_limit_blocks_after_limit():
 
     # On appelle rate_limit EXACTEMENT 60 fois (limit=60), dans une fenêtre de 60s.
     # Ces 60 appels sont PILE à la limite : ils doivent TOUS passer sans erreur.
+    # [PÉDAGOGIE] ITÉRATION — appliquer la même règle à chaque élément permet de raisonner sur un
+    # [PÉDAGOGIE] invariant stable.
     for _ in range(60):
         security.rate_limit(req, limit=60, window=60.0)
 
     # Le 61e appel dépasse la limite : on s'attend à ce qu'il LÈVE une HTTPException.
     # ``with pytest.raises(HTTPException) as e:`` -> le test réussit seulement si
     # une HTTPException est bien levée à l'intérieur du bloc (sinon il échoue).
+    # [PÉDAGOGIE] RESSOURCE — le gestionnaire de contexte garantit ouverture et libération, même
+    # [PÉDAGOGIE] en cas d'exception.
     with pytest.raises(HTTPException) as e:
         # Cet appel supplémentaire (le 61e) doit être REFUSÉ.
         security.rate_limit(req, limit=60, window=60.0)
 
     # e.value : l'exception réellement levée. On vérifie que son code HTTP est 429
     # (Too Many Requests), confirmant que la limitation de débit a bien bloqué.
+    # [PÉDAGOGIE] ORACLE — l'assertion compare le résultat observé au contrat attendu par ce test.
     assert e.value.status_code == 429
