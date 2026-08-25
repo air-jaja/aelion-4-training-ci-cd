@@ -1,5 +1,3 @@
-outs:
-- md5: 59070427776f828291d412fb119a81a8
-  size: 285807
-  hash: md5
-  path: gold_dataset.csv
+version https://git-lfs.github.com/spec/v1
+oid sha256:25da645625e8027f30137926d446ac9a229d125f46801d20e01ef177f08b2691
+size 98
